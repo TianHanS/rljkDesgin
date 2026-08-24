@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-08-21T06:14:09.475Z",
+  "updatedAt": "2026-08-24T07:56:17.951Z",
   "prototypes": [
     {
       "id": "item-prototypes-ref-antd",
@@ -293,6 +293,12 @@
       "kind": "item",
       "title": "coal storage structure",
       "itemKey": "prototypes/coal-storage-structure"
+    },
+    {
+      "id": "item-prototypes-coal-storage-structure-management",
+      "kind": "item",
+      "title": "coal storage structure management",
+      "itemKey": "prototypes/coal-storage-structure-management"
     }
   ],
   "components": [

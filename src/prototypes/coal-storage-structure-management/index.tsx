@@ -139,6 +139,22 @@ interface FlatRow {
   layer: ComputedLayer;
 }
 
+interface MarkFormValues {
+  batchNo?: string;
+  shipName?: string;
+  voyage?: string;
+  coalType?: string;
+  density?: number;
+}
+
+interface ManualFormValues {
+  time?: dayjs.Dayjs;
+  zoneId?: string;
+  batchNo?: string;
+  mass?: number;
+  note?: string;
+}
+
 const ComponentInner: React.FC = () => {
   const { message, modal } = App.useApp();
 
@@ -165,6 +181,9 @@ const ComponentInner: React.FC = () => {
   const [resizeMode, setResizeMode] = useState<'mass' | 'pitch'>('mass');
   const [resizeValue, setResizeValue] = useState<number>(0);
   const [manualType, setManualType] = useState<'in' | 'out' | 'set'>('in');
+  // 弹窗设为关闭即销毁，表单初值经 initialValues 传入，避免在未挂载时调用 setFieldsValue
+  const [markInitial, setMarkInitial] = useState<MarkFormValues>({});
+  const [manualInitial, setManualInitial] = useState<ManualFormValues>({});
 
   const yard = YARDS.find((y) => y.id === yardId)!;
 
@@ -319,7 +338,7 @@ const ComponentInner: React.FC = () => {
 
   const openMark = () => {
     if (!selectedLayer) return;
-    markForm.setFieldsValue({
+    setMarkInitial({
       batchNo: selectedLayer.raw.batchNo || undefined,
       shipName: selectedLayer.raw.shipName,
       voyage: selectedLayer.raw.voyage,
@@ -486,7 +505,7 @@ const ComponentInner: React.FC = () => {
 
   const openManual = (type: 'in' | 'out' | 'set') => {
     setManualType(type);
-    manualForm.setFieldsValue({
+    setManualInitial({
       time: dayjs(),
       zoneId: outerZones[0]?.id,
       batchNo: undefined,
@@ -1316,7 +1335,7 @@ const ComponentInner: React.FC = () => {
             </>
           )}
         </div>
-        <Form form={markForm} layout="vertical" requiredMark={false}>
+        <Form form={markForm} layout="vertical" requiredMark={false} initialValues={markInitial}>
           <Form.Item
             label="存煤批次"
             name="batchNo"
@@ -1473,7 +1492,12 @@ const ComponentInner: React.FC = () => {
           {manualType === 'out' ? '取煤顺序自上而下扣减' : '堆煤顺序堆至煤堆顶层'}
           ，自动回写至数字化煤场的煤堆分层结构。
         </div>
-        <Form form={manualForm} layout="vertical" requiredMark={false}>
+        <Form
+          form={manualForm}
+          layout="vertical"
+          requiredMark={false}
+          initialValues={manualInitial}
+        >
           <Radio.Group
             optionType="button"
             buttonStyle="solid"

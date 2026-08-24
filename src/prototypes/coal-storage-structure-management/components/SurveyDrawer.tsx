@@ -198,7 +198,7 @@ const SurveyDrawer: React.FC<Props> = ({
       title={`盘煤比对 · ${yard.shortName}`}
       open={open}
       onClose={onClose}
-      width="min(1180px, 96vw)"
+      size="min(1180px, 96vw)"
       destroyOnHidden
       footer={
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

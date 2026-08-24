@@ -357,7 +357,10 @@ interface YardFillPlan {
   seed: number;
   /** 36 个分区的充满度（相对几何容量），0 表示空区 */
   fill: number[];
-  /** 指定生成未识别煤层的位置：分区序号 → 该分区内未识别的层数（自顶层向下） */
+  /**
+   * 指定生成未识别煤层的位置：分区序号 → 该分区内未识别的层数（自顶层向下）。
+   * 指定层数超过该分区实际层数时按实际层数收敛。
+   */
   unmarked: Record<number, number>;
 }
 
@@ -386,7 +389,8 @@ const YARD_FILL_PLANS: Record<string, YardFillPlan> = {
       [3, 0.76],
       [3, 0.86],
     ]),
-    unmarked: { 7: 1, 19: 2 },
+    // 5 区连续两个盘煤周期未匹配到入厂批次，7 区与 22 区各有一层待标记
+    unmarked: { 5: 2, 7: 1, 22: 1 },
   },
   Y2: {
     seed: 20260817,
@@ -476,7 +480,7 @@ export const createZones = (): CoalZone[] => {
         // 底层更厚，符合先堆的煤层被后续煤层压覆的实际形态
         const weights = Array.from({ length: layerCount }, (_, i) => 1.6 - i * 0.28 + rnd() * 0.3);
         const weightSum = weights.reduce((s, w) => s + w, 0);
-        const unmarkedCount = plan.unmarked[code] ?? 0;
+        const unmarkedCount = Math.min(layerCount, plan.unmarked[code] ?? 0);
 
         for (let i = 0; i < layerCount; i += 1) {
           const volume = (totalVolume * weights[i]) / weightSum;

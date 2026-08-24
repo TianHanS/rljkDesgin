@@ -86,12 +86,14 @@ const SurveyDrawer: React.FC<Props> = ({
     { title: '分区', dataIndex: 'key', width: 68, render: (_, r) => r.zone.name },
     {
       title: '上次盘煤体积 m³',
+      key: 'lastVolume',
       width: 130,
       align: 'right',
       render: (_, r) => <span className="cssm-num">{fmt(r.zone.surveyVolume)}</span>,
     },
     {
       title: '本次盘煤体积 m³',
+      key: 'newVolume',
       width: 150,
       render: (_, r) => (
         <InputNumber
@@ -107,6 +109,7 @@ const SurveyDrawer: React.FC<Props> = ({
     },
     {
       title: '体积变动 m³',
+      key: 'delta',
       width: 116,
       align: 'right',
       render: (_, r) => {
@@ -123,6 +126,7 @@ const SurveyDrawer: React.FC<Props> = ({
     },
     {
       title: '堆煤高度 m',
+      key: 'height',
       width: 116,
       align: 'right',
       render: (_, r) => {
@@ -139,6 +143,7 @@ const SurveyDrawer: React.FC<Props> = ({
     },
     {
       title: '处理方式',
+      key: 'action',
       render: (_, r) => {
         const item = plan.items.find((i) => i.zoneId === r.zone.id);
         if (!item || item.kind === 'none') return <span style={{ color: '#b3aca3' }}>无变动</span>;
@@ -174,7 +179,7 @@ const SurveyDrawer: React.FC<Props> = ({
     { title: '批次号', dataIndex: 'batchNo', width: 118 },
     { title: '船名', dataIndex: 'shipName', width: 150 },
     { title: '航次', dataIndex: 'voyage', width: 76 },
-    { title: '煤种', width: 100, render: (_, r) => coalTypeName(r.coalType) },
+    { title: '煤种', key: 'coalType', width: 100, render: (_, r) => coalTypeName(r.coalType) },
     {
       title: '卸煤量 t',
       dataIndex: 'unloadedMass',

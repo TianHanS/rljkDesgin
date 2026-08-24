@@ -113,7 +113,7 @@ const LayerInspector: React.FC<Props> = ({
           <Alert
             type="warning"
             showIcon
-            message="该煤层未识别存煤批次"
+            title="该煤层未识别存煤批次"
             description="盘煤体积增量与周期内接卸批次的匹配密度超出合理区间，系统仅记录体积与估算煤量，请核对接卸台账后手动标记。"
             style={{ fontSize: 12 }}
           />

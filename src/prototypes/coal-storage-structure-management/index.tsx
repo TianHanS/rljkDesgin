@@ -591,9 +591,10 @@ const ComponentInner: React.FC = () => {
   }, [computedZones]);
 
   const detailColumns: ColumnsType<FlatRow> = [
-    { title: '分区', width: 68, fixed: 'left', render: (_, r) => r.zone.name },
+    { title: '分区', key: 'zone', width: 68, fixed: 'left', render: (_, r) => r.zone.name },
     {
       title: '层序',
+      key: 'seq',
       width: 62,
       render: (_, r) => (
         <span className="cssm-num">
@@ -603,6 +604,7 @@ const ComponentInner: React.FC = () => {
     },
     {
       title: '状态',
+      key: 'status',
       width: 86,
       render: (_, r) =>
         r.layer.raw.status === 'unmarked' ? (
@@ -615,34 +617,39 @@ const ComponentInner: React.FC = () => {
           </Tag>
         ),
     },
-    { title: '批次', width: 118, render: (_, r) => r.layer.raw.batchNo || '—' },
-    { title: '船名', width: 148, render: (_, r) => r.layer.raw.shipName || '—' },
-    { title: '航次', width: 72, render: (_, r) => r.layer.raw.voyage || '—' },
+    { title: '批次', key: 'batch', width: 118, render: (_, r) => r.layer.raw.batchNo || '—' },
+    { title: '船名', key: 'ship', width: 148, render: (_, r) => r.layer.raw.shipName || '—' },
+    { title: '航次', key: 'voyage', width: 72, render: (_, r) => r.layer.raw.voyage || '—' },
     {
       title: '煤种',
+      key: 'coalType',
       width: 100,
       render: (_, r) => (r.layer.raw.coalType ? coalTypeName(r.layer.raw.coalType) : '—'),
     },
     {
       title: '体积 m³',
+      key: 'volume',
       width: 96,
       align: 'right',
       render: (_, r) => <span className="cssm-num">{fmt(r.layer.volume)}</span>,
     },
     {
       title: '煤量 t',
+      key: 'mass',
       width: 96,
       align: 'right',
       render: (_, r) => <span className="cssm-num">{fmt(r.layer.mass)}</span>,
     },
     {
       title: '密度 t/m³',
+      key: 'density',
       width: 92,
       align: 'right',
       render: (_, r) => <span className="cssm-num">{r.layer.raw.density.toFixed(3)}</span>,
     },
     {
       title: '标高区间 m',
+      key: 'height',
       width: 118,
       align: 'right',
       render: (_, r) => (
@@ -653,6 +660,7 @@ const ComponentInner: React.FC = () => {
     },
     {
       title: '分界俯仰角',
+      key: 'pitch',
       width: 128,
       align: 'right',
       render: (_, r) => (
@@ -663,6 +671,7 @@ const ComponentInner: React.FC = () => {
     },
     {
       title: '热值 kcal/kg',
+      key: 'cv',
       width: 112,
       align: 'right',
       render: (_, r) => (
@@ -671,6 +680,7 @@ const ComponentInner: React.FC = () => {
     },
     {
       title: '硫分 %',
+      key: 'sulfur',
       width: 82,
       align: 'right',
       render: (_, r) => (
@@ -681,6 +691,7 @@ const ComponentInner: React.FC = () => {
     },
     {
       title: '灰分 %',
+      key: 'ash',
       width: 82,
       align: 'right',
       render: (_, r) => (
@@ -691,6 +702,7 @@ const ComponentInner: React.FC = () => {
     },
     {
       title: '挥发分 %',
+      key: 'volatile',
       width: 92,
       align: 'right',
       render: (_, r) => (
@@ -701,6 +713,7 @@ const ComponentInner: React.FC = () => {
     },
     {
       title: '水分 %',
+      key: 'moisture',
       width: 82,
       align: 'right',
       render: (_, r) => (
@@ -714,7 +727,7 @@ const ComponentInner: React.FC = () => {
   const moveColumns: ColumnsType<StockMove> = [
     { title: '时间', dataIndex: 'time', width: 132 },
     { title: '分区', dataIndex: 'zoneName', width: 72 },
-    { title: '批次', width: 118, render: (_, r) => r.batchNo || '待标记' },
+    { title: '批次', key: 'batch', width: 118, render: (_, r) => r.batchNo || '待标记' },
     { title: '煤种', dataIndex: 'coalTypeName', width: 96 },
     {
       title: '体积 m³',
@@ -771,7 +784,7 @@ const ComponentInner: React.FC = () => {
       ),
     },
     { title: '分区', dataIndex: 'zoneName', width: 72 },
-    { title: '来煤批次', width: 118, render: (_, r) => r.batchNo || '待标记' },
+    { title: '来煤批次', key: 'batch', width: 118, render: (_, r) => r.batchNo || '待标记' },
     { title: '煤种', dataIndex: 'coalTypeName', width: 96 },
     {
       title: '煤量 t',
@@ -831,7 +844,7 @@ const ComponentInner: React.FC = () => {
                 style={{ width: 116 }}
                 value={density}
                 onChange={(v) => setDensity(Number(v ?? DEFAULT_DENSITY))}
-                addonAfter="t/m³"
+                suffix="t/m³"
               />
             </span>
             {yard.hasSurvey ? (
@@ -1034,8 +1047,8 @@ const ComponentInner: React.FC = () => {
             {legendTypes.map((t) => (
               <span key={t.key} className="cssm-legend-group">
                 <span className="cssm-legend-ramp">
-                  {t.colors.map((c) => (
-                    <i key={c} style={{ background: c }} />
+                  {t.colors.map((c, i) => (
+                    <i key={`${t.key}-${i}`} style={{ background: c }} />
                   ))}
                 </span>
                 {t.name}
@@ -1234,7 +1247,7 @@ const ComponentInner: React.FC = () => {
                       type="info"
                       showIcon
                       style={{ marginBottom: 12 }}
-                      message="当前为厂内盘煤煤场"
+                      title="当前为厂内盘煤煤场"
                       description="手动台账仅用于无盘煤数据源的煤场（如厂外中转煤场）。切换到厂外中转煤场后可登记入库、出库或直接调整库存。"
                     />
                   ) : (
@@ -1359,7 +1372,7 @@ const ComponentInner: React.FC = () => {
                 min={0.6}
                 max={1.2}
                 step={0.01}
-                addonAfter="t/m³"
+                suffix="t/m³"
                 style={{ width: '100%' }}
               />
             </Form.Item>
@@ -1415,7 +1428,7 @@ const ComponentInner: React.FC = () => {
                 min={resizeMode === 'mass' ? 0 : -18}
                 max={resizeMode === 'mass' ? 200000 : 26}
                 step={resizeMode === 'mass' ? 100 : 0.5}
-                addonAfter={resizeMode === 'mass' ? 't' : '°'}
+                suffix={resizeMode === 'mass' ? 't' : '°'}
                 value={resizeValue}
                 onChange={(v) => setResizeValue(Number(v ?? 0))}
               />
@@ -1518,7 +1531,7 @@ const ComponentInner: React.FC = () => {
             name="mass"
             rules={[{ required: true, message: '请输入煤量' }]}
           >
-            <InputNumber min={0} max={200000} step={100} addonAfter="t" style={{ width: '100%' }} />
+            <InputNumber min={0} max={200000} step={100} suffix="t" style={{ width: '100%' }} />
           </Form.Item>
           <Form.Item label="备注" name="note">
             <Input.TextArea rows={2} placeholder="如：汽运转堆入库 / 倒运至厂内 #1 煤场" />

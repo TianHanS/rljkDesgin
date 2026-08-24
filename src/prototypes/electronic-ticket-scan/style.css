@@ -1,0 +1,16 @@
+@import "tailwindcss";
+
+/* 针对当前管理后台的微调 */
+.ant-card-head-title {
+  font-weight: 600;
+  color: #1e293b !important;
+}
+
+.ant-descriptions-item-label {
+  color: #64748b !important;
+  background-color: #f8fafc !important;
+}
+
+.ant-descriptions-item-content {
+  color: #334155 !important;
+}

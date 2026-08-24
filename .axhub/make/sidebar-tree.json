@@ -1,0 +1,347 @@
+{
+  "version": 1,
+  "updatedAt": "2026-08-21T06:14:09.475Z",
+  "prototypes": [
+    {
+      "id": "item-prototypes-ref-antd",
+      "kind": "item",
+      "title": "Antd 电商后台",
+      "itemKey": "prototypes/ref-antd"
+    },
+    {
+      "id": "item-prototypes-ref-app-home",
+      "kind": "item",
+      "title": "健身 App 首页",
+      "itemKey": "prototypes/ref-app-home"
+    },
+    {
+      "id": "folder-1773303557194-qamhpq",
+      "kind": "folder",
+      "title": "集控平台-无人转运调度",
+      "children": [
+        {
+          "id": "folder-1774949959456-aka68j",
+          "kind": "folder",
+          "title": "调度管控",
+          "children": [
+            {
+              "id": "item-prototypes-workbench-01",
+              "kind": "item",
+              "title": "工作台01",
+              "itemKey": "prototypes/workbench-01"
+            },
+            {
+              "id": "item-prototypes-data-monitoring",
+              "kind": "item",
+              "title": "数据监测",
+              "itemKey": "prototypes/data-monitoring"
+            },
+            {
+              "id": "item-prototypes-dispatch-task-management",
+              "kind": "item",
+              "title": "任务管理",
+              "itemKey": "prototypes/dispatch-task-management"
+            },
+            {
+              "id": "item-prototypes-dispatch-task-management-01",
+              "kind": "item",
+              "title": "任务管理01",
+              "itemKey": "prototypes/dispatch-task-management-01"
+            },
+            {
+              "id": "item-prototypes-agv-monitoring",
+              "kind": "item",
+              "title": "小车监控",
+              "itemKey": "prototypes/agv-monitoring"
+            },
+            {
+              "id": "item-prototypes-alarm-query",
+              "kind": "item",
+              "title": "报警查询",
+              "itemKey": "prototypes/alarm-query"
+            },
+            {
+              "id": "item-prototypes-log-query",
+              "kind": "item",
+              "title": "日志查询",
+              "itemKey": "prototypes/log-query"
+            }
+          ]
+        },
+        {
+          "id": "folder-1773390337525-g6drnc",
+          "kind": "folder",
+          "title": "配置管理",
+          "children": [
+            {
+              "id": "item-prototypes-site-management",
+              "kind": "item",
+              "title": "站点查询",
+              "itemKey": "prototypes/site-management"
+            },
+            {
+              "id": "item-prototypes-park-point-management",
+              "kind": "item",
+              "title": "停靠点查询",
+              "itemKey": "prototypes/park-point-management"
+            },
+            {
+              "id": "item-prototypes-terminal-management",
+              "kind": "item",
+              "title": "装卸端管理",
+              "itemKey": "prototypes/terminal-management"
+            },
+            {
+              "id": "item-prototypes-address-management",
+              "kind": "item",
+              "title": "地址查询",
+              "itemKey": "prototypes/address-management"
+            },
+            {
+              "id": "item-prototypes-vehicle-management",
+              "kind": "item",
+              "title": "车辆管理",
+              "itemKey": "prototypes/vehicle-management"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "folder-1774862188216-9f87uz",
+      "kind": "folder",
+      "title": "集控平台功能",
+      "children": [
+        {
+          "id": "folder-1780993833503-zskrhh",
+          "kind": "folder",
+          "title": "入厂登记",
+          "children": [
+            {
+              "id": "item-prototypes-driver-self-service-entry",
+              "kind": "item",
+              "title": "司机自助入厂登记",
+              "itemKey": "prototypes/driver-self-service-entry"
+            }
+          ]
+        },
+        {
+          "id": "item-prototypes-main-dashboard",
+          "kind": "item",
+          "title": "工作台",
+          "itemKey": "prototypes/main-dashboard"
+        },
+        {
+          "id": "item-prototypes-device-realtime-monitor",
+          "kind": "item",
+          "title": "设备实时监测",
+          "itemKey": "prototypes/device-realtime-monitor"
+        },
+        {
+          "id": "item-prototypes-sample-cabinet",
+          "kind": "item",
+          "title": "存样柜",
+          "itemKey": "prototypes/sample-cabinet"
+        },
+        {
+          "id": "item-prototypes-electronic-ticket-scan",
+          "kind": "item",
+          "title": "电子磅单司机扫描",
+          "itemKey": "prototypes/electronic-ticket-scan"
+        },
+        {
+          "id": "folder-1778568949728-tdwvff",
+          "kind": "folder",
+          "title": "消息推送",
+          "children": [
+            {
+              "id": "item-prototypes-business-message-query",
+              "kind": "item",
+              "title": "业务消息查询",
+              "itemKey": "prototypes/business-message-query"
+            },
+            {
+              "id": "item-prototypes-message-config",
+              "kind": "item",
+              "title": "消息配置",
+              "itemKey": "prototypes/message-config"
+            }
+          ]
+        },
+        {
+          "id": "item-prototypes-operation-log-management",
+          "kind": "item",
+          "title": "运行日志管理",
+          "itemKey": "prototypes/operation-log-management"
+        }
+      ]
+    },
+    {
+      "id": "folder-1782885244526-f9cd53",
+      "kind": "folder",
+      "title": "无人化验",
+      "children": [
+        {
+          "id": "item-prototypes-unmanned-lab-monitor",
+          "kind": "item",
+          "title": "无人化验监测",
+          "itemKey": "prototypes/unmanned-lab-monitor"
+        }
+      ]
+    },
+    {
+      "id": "folder-1784162919611-u843py",
+      "kind": "folder",
+      "title": "GXSZ",
+      "children": [
+        {
+          "id": "item-prototypes-platform-workbench",
+          "kind": "item",
+          "title": "平台工作台首页",
+          "itemKey": "prototypes/platform-workbench"
+        },
+        {
+          "id": "item-prototypes-platform-workbench-copy",
+          "kind": "item",
+          "title": "平台工作台首页1",
+          "itemKey": "prototypes/platform-workbench-copy"
+        },
+        {
+          "id": "folder-1774862206044-q8rlo3",
+          "kind": "folder",
+          "title": "国信沙洲-燃煤管控",
+          "children": [
+            {
+              "id": "item-prototypes-video-monitoring",
+              "kind": "item",
+              "title": "视频监控",
+              "itemKey": "prototypes/video-monitoring"
+            },
+            {
+              "id": "item-prototypes-coal-unloading-management",
+              "kind": "item",
+              "title": "卸煤管理",
+              "itemKey": "prototypes/coal-unloading-management"
+            },
+            {
+              "id": "item-prototypes-coal-loading-bill-management",
+              "kind": "item",
+              "title": "上煤单管理",
+              "itemKey": "prototypes/coal-loading-bill-management"
+            },
+            {
+              "id": "item-prototypes-coal-blending-bill-management",
+              "kind": "item",
+              "title": "配煤单管理",
+              "itemKey": "prototypes/coal-blending-bill-management"
+            },
+            {
+              "id": "item-prototypes-coal-blending-plan-view",
+              "kind": "item",
+              "title": "配煤单查看",
+              "itemKey": "prototypes/coal-blending-plan-view"
+            },
+            {
+              "id": "item-prototypes-coal-handling-flow-monitor",
+              "kind": "item",
+              "title": "输煤全流程动态展示",
+              "itemKey": "prototypes/coal-handling-flow-monitor"
+            },
+            {
+              "id": "item-prototypes-full-process-metering-analysis",
+              "kind": "item",
+              "title": "全程计量分析",
+              "itemKey": "prototypes/full-process-metering-analysis"
+            },
+            {
+              "id": "item-prototypes-full-process-energy-analysis",
+              "kind": "item",
+              "title": "全程能耗分析",
+              "itemKey": "prototypes/full-process-energy-analysis"
+            }
+          ]
+        },
+        {
+          "id": "folder-1785393502335-aqrut8",
+          "kind": "folder",
+          "title": "统计报表",
+          "children": [
+            {
+              "id": "item-prototypes-fuel-handling-shift-report",
+              "kind": "item",
+              "title": "燃运值班报表",
+              "itemKey": "prototypes/fuel-handling-shift-report"
+            },
+            {
+              "id": "item-prototypes-fuel-handling-shift-competition",
+              "kind": "item",
+              "title": "燃运班值小指标竞赛统计",
+              "itemKey": "prototypes/fuel-handling-shift-competition"
+            },
+            {
+              "id": "item-prototypes-team-duty-monthly-competition",
+              "kind": "item",
+              "title": "班值月度竞赛统计",
+              "itemKey": "prototypes/team-duty-monthly-competition"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "item-prototypes-coal-storage-structure",
+      "kind": "item",
+      "title": "coal storage structure",
+      "itemKey": "prototypes/coal-storage-structure"
+    }
+  ],
+  "components": [
+    {
+      "id": "item-components-ref-line-chart",
+      "kind": "item",
+      "title": "ECharts 折线图",
+      "itemKey": "components/ref-line-chart"
+    },
+    {
+      "id": "item-components-ref-button",
+      "kind": "item",
+      "title": "按钮元素",
+      "itemKey": "components/ref-button"
+    },
+    {
+      "id": "item-components-side-menu",
+      "kind": "item",
+      "title": "侧边菜单",
+      "itemKey": "components/side-menu"
+    }
+  ],
+  "docs": [
+    {
+      "id": "folder-1772009037892-gyrfpg",
+      "kind": "folder",
+      "title": "演示文档",
+      "children": [
+        {
+          "id": "item-docs----------lite-prd----md",
+          "kind": "item",
+          "title": "售后诉求一键提取",
+          "itemKey": "docs/售后诉求一键提取.md"
+        },
+        {
+          "id": "item-docs-------------md",
+          "kind": "item",
+          "title": "评审工作台需求文档",
+          "itemKey": "docs/评审工作台需求文档.md"
+        }
+      ]
+    }
+  ],
+  "themes": [
+    "antd-new",
+    "trae-design",
+    "firecrawl"
+  ],
+  "data": [
+    "orders"
+  ]
+}

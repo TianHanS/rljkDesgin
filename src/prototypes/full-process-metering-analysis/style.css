@@ -1,0 +1,274 @@
+@import "tailwindcss";
+
+.fpm-page {
+  min-height: 100vh;
+  padding: 20px 24px 40px;
+  background: #f3f5f7;
+  color: #1f2937;
+  font-family: "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+}
+
+.fpm-hd {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.fpm-hd h1 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.fpm-hd p {
+  margin: 6px 0 0;
+  font-size: 13px;
+  color: #6b7280;
+  max-width: 640px;
+}
+
+.fpm-top-alert {
+  margin-bottom: 14px;
+}
+
+.fpm-section {
+  margin-bottom: 14px;
+  padding: 14px 16px;
+  border: 1px solid #e5e9ee;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.fpm-section-hd {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.fpm-section-title {
+  margin-bottom: 12px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #1f2a37;
+}
+
+.fpm-section-hd .fpm-section-title {
+  margin-bottom: 0;
+}
+
+.fpm-section-title::before {
+  content: "";
+  display: inline-block;
+  width: 3px;
+  height: 12px;
+  margin-right: 8px;
+  border-radius: 2px;
+  background: #1677ff;
+  vertical-align: -1px;
+}
+
+.fpm-desc {
+  margin: -4px 0 12px;
+  font-size: 12px;
+  color: #6b7280;
+  line-height: 1.5;
+}
+
+.fpm-hint {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.fpm-num {
+  font-variant-numeric: tabular-nums;
+  font-family: "DIN Alternate", "Segoe UI", system-ui, sans-serif;
+}
+
+.fpm-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.fpm-kpi {
+  padding: 12px 14px;
+  border: 1px solid #e8edf2;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.fpm-kpi-name {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.fpm-kpi-ton {
+  margin-top: 6px;
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  color: #111827;
+}
+
+.fpm-kpi-ton .fpm-num {
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.fpm-kpi-ton em {
+  font-style: normal;
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+.fpm-kpi-src {
+  margin-top: 6px;
+  font-size: 11px;
+  color: #9ca3af;
+}
+
+.fpm-flow-grid {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr auto 1fr;
+  gap: 8px;
+  align-items: stretch;
+}
+
+.fpm-flow-card {
+  padding: 12px 14px;
+  border: 1px solid #e5e9ee;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.fpm-flow-card.is-ok {
+  border-color: #b7eb8f;
+  background: #f6ffed;
+}
+
+.fpm-flow-card.is-warn {
+  border-color: #ffe58f;
+  background: #fffbe6;
+}
+
+.fpm-flow-card.is-error {
+  border-color: #ffccc7;
+  background: #fff2f0;
+}
+
+.fpm-flow-hd {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.fpm-flow-pair {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 8px;
+  align-items: center;
+}
+
+.fpm-flow-pair .k {
+  display: block;
+  font-size: 11px;
+  color: #6b7280;
+}
+
+.fpm-flow-pair .v {
+  display: block;
+  margin-top: 2px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.fpm-flow-vs {
+  color: #9ca3af;
+  font-weight: 700;
+}
+
+.fpm-flow-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 10px;
+  font-size: 12px;
+  color: #4b5563;
+}
+
+.fpm-flow-arrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #9ca3af;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.fpm-two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.fpm-drawer-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.fpm-drawer-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.fpm-drawer-item.is-block {
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.fpm-drawer-item .k {
+  min-width: 72px;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.fpm-drawer-item .v {
+  font-size: 13px;
+  color: #111827;
+  line-height: 1.5;
+}
+
+@media (max-width: 1200px) {
+  .fpm-kpi-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .fpm-flow-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .fpm-flow-arrow {
+    display: none;
+  }
+
+  .fpm-two-col {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .fpm-hd {
+    flex-direction: column;
+  }
+
+  .fpm-kpi-grid {
+    grid-template-columns: 1fr;
+  }
+}

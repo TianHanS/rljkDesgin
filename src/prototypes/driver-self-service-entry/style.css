@@ -1,0 +1,216 @@
+@import "tailwindcss";
+
+/* ===== 整体布局：浅蓝渐变背景 ===== */
+.touch-screen-layout {
+  height: 100vh;
+  width: 100vw;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+  background: linear-gradient(118deg, #d8e8fb 0%, #eef5fe 38%, #e2eefc 70%, #cfe3fa 100%);
+}
+
+/* 背景柔和光带装饰 */
+.bg-decor {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+.bg-decor::before {
+  content: '';
+  position: absolute;
+  width: 90%;
+  height: 120%;
+  top: -45%;
+  right: -25%;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0) 65%);
+  border-radius: 45%;
+  transform: rotate(18deg);
+}
+.bg-decor::after {
+  content: '';
+  position: absolute;
+  width: 100%;
+  height: 90%;
+  bottom: -55%;
+  left: -20%;
+  background: linear-gradient(20deg, rgba(120, 170, 240, 0.28) 0%, rgba(255, 255, 255, 0) 60%);
+  border-radius: 50%;
+  transform: rotate(-10deg);
+}
+
+/* 顶部信息条 */
+.top-bar {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 18px 40px 0;
+}
+
+/* ===== 白色圆角卡片 ===== */
+.panel-card {
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 12px 32px rgba(30, 90, 180, 0.10);
+}
+
+/* ===== 表单字段（标签 + 下划线值） ===== */
+.field-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 13px 2px;
+  border-bottom: 1px solid #eef1f6;
+}
+.field-label {
+  color: #8c98ab;
+  font-size: 17px;
+  min-width: 96px;
+  flex-shrink: 0;
+}
+.field-value {
+  color: #1f2937;
+  font-size: 20px;
+  font-weight: 600;
+  flex: 1;
+}
+
+/* 蓝点分组标题 */
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 24px 0 6px;
+}
+.section-title .dot {
+  width: 13px;
+  height: 13px;
+  border-radius: 9999px;
+  background: #1677ff;
+  box-shadow: 0 0 0 4px rgba(22, 119, 255, 0.15);
+}
+.section-title .txt {
+  font-size: 19px;
+  font-weight: 600;
+  color: #374151;
+}
+
+/* ===== 登录页下划线输入 ===== */
+.login-underline {
+  border-bottom: 2px solid #b9d2f5;
+  padding: 8px 4px;
+  width: 440px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: transparent;
+  transition: border-color 0.3s;
+}
+.login-underline:focus-within {
+  border-color: #1677ff;
+}
+.login-underline .ant-input {
+  font-size: 20px;
+}
+
+/* ===== 首页大按钮 ===== */
+.big-action-btn {
+  width: 320px;
+  height: 190px;
+  font-size: 30px;
+  border-radius: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  background: #ffffff;
+  color: #1677ff;
+  border: 1px solid #dbeafe;
+  box-shadow: 0 12px 32px rgba(30, 90, 180, 0.12);
+  cursor: pointer;
+  transition: all 0.25s;
+}
+.big-action-btn:active {
+  transform: scale(0.97);
+}
+.big-action-btn.primary {
+  background: #1677ff;
+  color: #ffffff;
+  border-color: #1677ff;
+}
+.big-action-btn .anticon {
+  font-size: 58px;
+}
+
+/* 扫码示意框 */
+.scan-illustration {
+  width: 180px;
+  height: 180px;
+  border: 2px dashed #91caff;
+  border-radius: 16px;
+  background: #f0f7ff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 96px;
+  color: #1677ff;
+}
+
+/* ===== 磅单卡片 ===== */
+.slip-card {
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s;
+  background-color: white;
+  border: 1px solid #e3ecf8;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 6px 18px rgba(30, 90, 180, 0.08);
+}
+.slip-card:active {
+  transform: scale(0.98);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+.slip-card-header {
+  background-color: #f6faff;
+  padding: 14px 20px;
+  border-bottom: 1px solid #e8eef8;
+  border-radius: 12px 12px 0 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.slip-card-body {
+  padding: 16px 20px;
+  flex: 1;
+}
+
+/* 放大弹窗 */
+.expanded-card-modal .ant-modal-content {
+  border-radius: 20px;
+  overflow: hidden;
+}
+.expanded-card-modal .ant-modal-body {
+  padding: 0;
+}
+
+/* 翻页大按钮 */
+.pagination-btn {
+  width: 140px;
+  height: 60px;
+  font-size: 20px;
+  border-radius: 30px;
+}
+
+/* 隐藏真实输入框，保留焦点用于捕获扫码枪输入 */
+.hidden-scanner-input {
+  position: absolute;
+  opacity: 0;
+  left: -9999px;
+}

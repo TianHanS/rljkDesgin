@@ -1,0 +1,294 @@
+@import "tailwindcss";
+
+.chf-root {
+  --chf-bg: #e8ecf0;
+  --chf-panel: #ffffff;
+  --chf-ink: #1f1f1f;
+  --chf-muted: #595959;
+  --chf-run: #52c41a;
+  --chf-stop: #ff4d4f;
+  --chf-warn: #faad14;
+  --chf-line: rgba(0, 0, 0, 0.08);
+  --chf-accent: #1677ff;
+  min-height: 100vh;
+  background: var(--chf-bg);
+  color: var(--chf-ink);
+  font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+}
+
+.chf-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 20px;
+  background: var(--chf-panel);
+  border-bottom: 1px solid var(--chf-line);
+}
+
+.chf-title {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.chf-title h1 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.chf-title span {
+  font-size: 12px;
+  color: var(--chf-muted);
+}
+
+.chf-body {
+  display: flex;
+  height: calc(100vh - 58px);
+  min-height: 640px;
+}
+
+.chf-main {
+  flex: 1;
+  min-width: 0;
+  position: relative;
+  overflow: hidden;
+}
+
+.chf-side {
+  width: 300px;
+  flex-shrink: 0;
+  background: var(--chf-panel);
+  border-left: 1px solid var(--chf-line);
+  padding: 14px;
+  overflow: auto;
+}
+
+.chf-card {
+  background: #fafafa;
+  border: 1px solid var(--chf-line);
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 12px;
+}
+
+.chf-card h3 {
+  margin: 0 0 8px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.chf-kv {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+  padding: 4px 0;
+  border-bottom: 1px dashed rgba(0, 0, 0, 0.06);
+}
+
+.chf-kv:last-child {
+  border-bottom: none;
+}
+
+.chf-kv span:last-child {
+  font-variant-numeric: tabular-nums;
+  color: var(--chf-ink);
+  font-weight: 500;
+}
+
+.chf-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  font-size: 12px;
+  color: var(--chf-muted);
+}
+
+.chf-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  margin-right: 4px;
+}
+
+.chf-yard-panel {
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 8px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  cursor: pointer;
+  font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  color: #1f1f1f;
+}
+
+.chf-yard-panel:hover {
+  border-color: #1677ff;
+  box-shadow: 0 0 0 1px rgba(22, 119, 255, 0.2);
+}
+
+.chf-yard-panel-hd {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+  background: linear-gradient(90deg, #e6f4ff 0%, #f5f9fc 100%);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.chf-yard-panel-time {
+  font-size: 10px;
+  font-weight: 400;
+  color: #8c8c8c;
+}
+
+.chf-yard-panel-bd {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px 12px;
+}
+
+.chf-yard-panel-bd-data .chf-yard-stat-block {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  font-size: 12px;
+  line-height: 1.6;
+  color: #595959;
+}
+
+.chf-yard-stat-block {
+  background: #fafafa;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-radius: 4px;
+  padding: 8px 10px;
+}
+
+.chf-yard-stat-title {
+  font-weight: 600;
+  color: #1677ff;
+  margin-bottom: 4px;
+  font-size: 13px;
+}
+
+.chf-overview svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.chf-hot {
+  cursor: pointer;
+  transition: filter 0.15s ease, opacity 0.15s ease;
+}
+
+.chf-hot:hover {
+  filter: brightness(1.08);
+  outline: none;
+}
+
+.chf-flow-run {
+  stroke: var(--chf-run);
+  stroke-width: 6;
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.chf-flow-stop {
+  stroke: var(--chf-stop);
+  stroke-width: 6;
+  fill: none;
+  stroke-linecap: round;
+  opacity: 0.85;
+}
+
+.chf-flow-anim {
+  stroke-dasharray: 10 8;
+  animation: chf-dash 1.2s linear infinite;
+}
+
+@keyframes chf-dash {
+  to {
+    stroke-dashoffset: -36;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chf-flow-anim {
+    animation: none;
+  }
+}
+
+.chf-bunker {
+  cursor: pointer;
+}
+
+.chf-bunker:hover .chf-bunker-shell {
+  stroke: var(--chf-accent);
+  stroke-width: 2;
+}
+
+.chf-yard3d {
+  width: 100%;
+  height: 100%;
+  min-height: 520px;
+}
+
+.chf-hover-tip {
+  position: fixed;
+  z-index: 40;
+  pointer-events: none;
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-size: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  max-width: 240px;
+}
+
+.chf-panel-view {
+  height: 100%;
+  overflow: auto;
+  padding: 16px 20px;
+}
+
+.chf-status-run {
+  color: var(--chf-run);
+  font-weight: 600;
+}
+
+.chf-status-stop {
+  color: var(--chf-stop);
+  font-weight: 600;
+}
+
+.chf-layer-bar {
+  display: flex;
+  flex-direction: column-reverse;
+  height: 120px;
+  width: 36px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 4px;
+  overflow: hidden;
+  background: #f0f0f0;
+}
+
+.chf-layer-seg {
+  width: 100%;
+}

@@ -1,0 +1,114 @@
+@import "tailwindcss";
+
+/* Custom Grid Columns for 40 slots */
+.grid-cols-40 {
+  grid-template-columns: repeat(40, minmax(0, 1fr));
+}
+
+/* Ant Design Dark Theme Overrides for Sample Cabinet */
+
+/* Table */
+.custom-dark-table .ant-table {
+  background: transparent !important;
+  color: #d1d5db !important;
+}
+
+.custom-dark-table .ant-table-thead > tr > th {
+  background: transparent !important;
+  color: #9ca3af !important;
+  border-bottom: 1px solid rgba(22, 78, 99, 0.5) !important;
+  font-weight: normal;
+}
+
+.custom-dark-table .ant-table-tbody > tr > td {
+  border-bottom: 1px solid rgba(22, 78, 99, 0.3) !important;
+  transition: background-color 0.2s;
+}
+
+.custom-dark-table .ant-table-tbody > tr:hover > td {
+  background-color: rgba(30, 58, 95, 0.8) !important;
+}
+
+/* Modal */
+.custom-dark-modal .ant-modal-content {
+  background-color: #0f1c2e !important;
+  border: 1px solid rgba(6, 182, 212, 0.4) !important;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.5) !important;
+}
+
+.custom-dark-modal .ant-modal-header {
+  background-color: transparent !important;
+  border-bottom: none !important;
+}
+
+/* Select */
+.custom-dark-select .ant-select-selector,
+.custom-dark-select-small .ant-select-selector {
+  background-color: rgba(13, 27, 42, 0.8) !important;
+  border: 1px solid rgba(6, 182, 212, 0.4) !important;
+  color: #e5e7eb !important;
+  box-shadow: inset 0 0 10px rgba(6, 182, 212, 0.05) !important;
+}
+
+.custom-dark-select:hover .ant-select-selector,
+.custom-dark-select-small:hover .ant-select-selector {
+  border-color: #67e8f9 !important;
+}
+
+.custom-dark-select.ant-select-focused .ant-select-selector,
+.custom-dark-select-small.ant-select-focused .ant-select-selector {
+  border-color: #67e8f9 !important;
+  box-shadow: 0 0 8px rgba(6, 182, 212, 0.3) !important;
+}
+
+.custom-dark-select .ant-select-arrow,
+.custom-dark-select-small .ant-select-arrow {
+  color: #9ca3af !important;
+}
+
+/* Select Dropdown */
+.custom-dark-select-popup .ant-select-dropdown {
+  background-color: #0f1c2e !important;
+  border: 1px solid rgba(6, 182, 212, 0.4) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5) !important;
+  padding: 4px !important;
+}
+
+.custom-dark-select-popup .ant-select-item {
+  color: #9ca3af !important;
+  border-radius: 4px !important;
+  margin-bottom: 2px !important;
+  transition: all 0.3s !important;
+}
+
+.custom-dark-select-popup .ant-select-item-option-active:not(.ant-select-item-option-disabled) {
+  background-color: rgba(6, 182, 212, 0.15) !important;
+  color: #67e8f9 !important;
+}
+
+.custom-dark-select-popup .ant-select-item-option-selected:not(.ant-select-item-option-disabled) {
+  background-color: rgba(6, 182, 212, 0.25) !important;
+  color: #67e8f9 !important;
+  font-weight: bold !important;
+}
+
+/* Hide Table Pagination just in case */
+.custom-dark-table .ant-pagination {
+  display: none !important;
+}
+
+/* Custom Scrollbar for container */
+.custom-dark-table-container::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.custom-dark-table-container::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.2);
+}
+.custom-dark-table-container::-webkit-scrollbar-thumb {
+  background: rgba(22, 78, 99, 0.5);
+  border-radius: 3px;
+}
+.custom-dark-table-container::-webkit-scrollbar-thumb:hover {
+  background: rgba(6, 182, 212, 0.5);
+}

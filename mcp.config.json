@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "axhub": {
+      "command": "node",
+      "args": ["./node_modules/.bin/axhub-mcp-bridge"],
+      "env": {}
+    }
+  }
+}

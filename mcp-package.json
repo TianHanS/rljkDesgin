@@ -1,0 +1,14 @@
+{
+  "name": "4d-coal-yard-mcp",
+  "version": "1.0.0",
+  "description": "4D Coal Yard MCP Bridge Integration",
+  "main": "mcp-axhub-example.js",
+  "scripts": {
+    "mcp:start": "node mcp-axhub-example.js",
+    "mcp:dev": "node --watch mcp-axhub-example.js"
+  },
+  "dependencies": {
+    "aisdk-mcp-bridge": "^1.0.0"
+  },
+  "devDependencies": {}
+}

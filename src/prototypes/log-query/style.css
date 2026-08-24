@@ -1,0 +1,64 @@
+@import "tailwindcss";
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.5);
+  border-radius: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(34, 211, 238, 0.2);
+  border-radius: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(34, 211, 238, 0.4);
+}
+
+/* Fix ant table dark theme scrollbars if needed */
+.ant-table-body::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.ant-table-body::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.5);
+}
+.ant-table-body::-webkit-scrollbar-thumb {
+  background: rgba(34, 211, 238, 0.2);
+  border-radius: 4px;
+}
+
+.custom-drawer .ant-drawer-content {
+  background-color: #0f172a;
+}
+
+.custom-drawer .ant-drawer-header {
+  border-bottom: 1px solid rgba(34, 211, 238, 0.2);
+  padding: 16px 24px;
+}
+
+.custom-drawer .ant-drawer-title {
+  color: #22d3ee;
+}
+
+.custom-drawer .ant-drawer-close {
+  color: #94a3b8;
+}
+
+.custom-drawer .ant-drawer-close:hover {
+  color: #fff;
+}
+
+/* Timeline overrides for custom dots */
+.ant-timeline .ant-timeline-item-tail {
+  border-inline-start: 2px solid rgba(34, 211, 238, 0.2) !important;
+}
+
+.ant-timeline .ant-timeline-item-head-custom {
+  background: transparent !important;
+  padding: 0 !important;
+}

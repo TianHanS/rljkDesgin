@@ -1,0 +1,130 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-03-17T10:51:31.310Z",
+  "items": {
+    "components/ref-button": {
+      "group": "components",
+      "name": "ref-button",
+      "js": "src/components/ref-button/index.tsx",
+      "html": "src/components/ref-button/index.html"
+    },
+    "components/ref-line-chart": {
+      "group": "components",
+      "name": "ref-line-chart",
+      "js": "src/components/ref-line-chart/index.tsx",
+      "html": "src/components/ref-line-chart/index.html"
+    },
+    "components/side-menu": {
+      "group": "components",
+      "name": "side-menu",
+      "js": "src/components/side-menu/index.tsx",
+      "html": "src/components/side-menu/index.html"
+    },
+    "prototypes/address-management": {
+      "group": "prototypes",
+      "name": "address-management",
+      "js": "src/prototypes/address-management/index.tsx",
+      "html": "src/prototypes/address-management/index.html"
+    },
+    "prototypes/coal-strip-initialization": {
+      "group": "prototypes",
+      "name": "coal-strip-initialization",
+      "js": "src/prototypes/coal-strip-initialization/index.tsx",
+      "html": "src/prototypes/coal-strip-initialization/index.html"
+    },
+    "prototypes/coal-strip-management": {
+      "group": "prototypes",
+      "name": "coal-strip-management",
+      "js": "src/prototypes/coal-strip-management/index.tsx",
+      "html": "src/prototypes/coal-strip-management/index.html"
+    },
+    "prototypes/park-point-management": {
+      "group": "prototypes",
+      "name": "park-point-management",
+      "js": "src/prototypes/park-point-management/index.tsx",
+      "html": "src/prototypes/park-point-management/index.html"
+    },
+    "prototypes/ref-antd": {
+      "group": "prototypes",
+      "name": "ref-antd",
+      "js": "src/prototypes/ref-antd/index.tsx",
+      "html": "src/prototypes/ref-antd/index.html"
+    },
+    "prototypes/ref-app-home": {
+      "group": "prototypes",
+      "name": "ref-app-home",
+      "js": "src/prototypes/ref-app-home/index.tsx",
+      "html": "src/prototypes/ref-app-home/index.html"
+    },
+    "prototypes/site-management": {
+      "group": "prototypes",
+      "name": "site-management",
+      "js": "src/prototypes/site-management/index.tsx",
+      "html": "src/prototypes/site-management/index.html"
+    },
+    "prototypes/terminal-management": {
+      "group": "prototypes",
+      "name": "terminal-management",
+      "js": "src/prototypes/terminal-management/index.tsx",
+      "html": "src/prototypes/terminal-management/index.html"
+    },
+    "prototypes/vehicle-management": {
+      "group": "prototypes",
+      "name": "vehicle-management",
+      "js": "src/prototypes/vehicle-management/index.tsx",
+      "html": "src/prototypes/vehicle-management/index.html"
+    },
+    "themes/antd-new": {
+      "group": "themes",
+      "name": "antd-new",
+      "js": "src/themes/antd-new/index.tsx",
+      "html": "src/themes/antd-new/index.html"
+    },
+    "themes/firecrawl": {
+      "group": "themes",
+      "name": "firecrawl",
+      "js": "src/themes/firecrawl/index.tsx",
+      "html": "src/themes/firecrawl/index.html"
+    },
+    "themes/trae-design": {
+      "group": "themes",
+      "name": "trae-design",
+      "js": "src/themes/trae-design/index.tsx",
+      "html": "src/themes/trae-design/index.html"
+    }
+  },
+  "js": {
+    "components/ref-button": "src/components/ref-button/index.tsx",
+    "components/ref-line-chart": "src/components/ref-line-chart/index.tsx",
+    "components/side-menu": "src/components/side-menu/index.tsx",
+    "prototypes/address-management": "src/prototypes/address-management/index.tsx",
+    "prototypes/coal-strip-initialization": "src/prototypes/coal-strip-initialization/index.tsx",
+    "prototypes/coal-strip-management": "src/prototypes/coal-strip-management/index.tsx",
+    "prototypes/park-point-management": "src/prototypes/park-point-management/index.tsx",
+    "prototypes/ref-antd": "src/prototypes/ref-antd/index.tsx",
+    "prototypes/ref-app-home": "src/prototypes/ref-app-home/index.tsx",
+    "prototypes/site-management": "src/prototypes/site-management/index.tsx",
+    "prototypes/terminal-management": "src/prototypes/terminal-management/index.tsx",
+    "prototypes/vehicle-management": "src/prototypes/vehicle-management/index.tsx",
+    "themes/antd-new": "src/themes/antd-new/index.tsx",
+    "themes/firecrawl": "src/themes/firecrawl/index.tsx",
+    "themes/trae-design": "src/themes/trae-design/index.tsx"
+  },
+  "html": {
+    "components/ref-button": "src/components/ref-button/index.html",
+    "components/ref-line-chart": "src/components/ref-line-chart/index.html",
+    "components/side-menu": "src/components/side-menu/index.html",
+    "prototypes/address-management": "src/prototypes/address-management/index.html",
+    "prototypes/coal-strip-initialization": "src/prototypes/coal-strip-initialization/index.html",
+    "prototypes/coal-strip-management": "src/prototypes/coal-strip-management/index.html",
+    "prototypes/park-point-management": "src/prototypes/park-point-management/index.html",
+    "prototypes/ref-antd": "src/prototypes/ref-antd/index.html",
+    "prototypes/ref-app-home": "src/prototypes/ref-app-home/index.html",
+    "prototypes/site-management": "src/prototypes/site-management/index.html",
+    "prototypes/terminal-management": "src/prototypes/terminal-management/index.html",
+    "prototypes/vehicle-management": "src/prototypes/vehicle-management/index.html",
+    "themes/antd-new": "src/themes/antd-new/index.html",
+    "themes/firecrawl": "src/themes/firecrawl/index.html",
+    "themes/trae-design": "src/themes/trae-design/index.html"
+  }
+}

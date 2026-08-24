@@ -1,0 +1,23 @@
+@import "tailwindcss";
+
+.custom-tree-wrapper .ant-tree {
+  background: transparent;
+  color: #d1d5db;
+}
+
+.custom-tree-wrapper .ant-tree-node-content-wrapper:hover {
+  background-color: #1c3a66 !important;
+}
+
+.custom-tree-wrapper .ant-tree-node-selected {
+  background-color: #1890ff !important;
+  color: white !important;
+}
+
+.custom-tree-wrapper .ant-tree-switcher {
+  color: #8b9eb5;
+}
+
+.dark-modal .ant-modal-content {
+  /* You can customize modal here if needed, but since we are just putting a standard modal, the text is set to gray-800/700 in the component */
+}

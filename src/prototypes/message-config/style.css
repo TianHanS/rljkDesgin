@@ -1,0 +1,6 @@
+@import "tailwindcss";
+
+.message-config-root {
+  min-height: 100vh;
+  background: #f0f2f5;
+}

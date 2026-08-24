@@ -1,0 +1,215 @@
+@import "tailwindcss";
+
+/* Container Styles */
+.site-management-container {
+  min-height: 100vh;
+  background-color: #050b14; /* Deep navy background */
+  background-image: 
+    radial-gradient(white, rgba(255,255,255,.2) 2px, transparent 3px),
+    radial-gradient(white, rgba(255,255,255,.15) 1px, transparent 2px),
+    radial-gradient(white, rgba(255,255,255,.1) 2px, transparent 3px);
+  background-size: 550px 550px, 350px 350px, 250px 250px;
+  background-position: 0 0, 40px 60px, 130px 270px;
+  position: relative;
+  overflow: hidden;
+  color: #e0f7fa;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
+/* Header Styles */
+.page-header {
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  background: rgba(10, 25, 41, 0.95);
+  border-bottom: 1px solid #1e3a5f;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(8px);
+}
+
+.header-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-shadow: 0 0 10px rgba(0, 229, 255, 0.5);
+}
+
+.logo-icon {
+  font-size: 24px;
+}
+
+.header-nav {
+  display: flex;
+  gap: 4px;
+}
+
+.nav-item {
+  padding: 8px 20px;
+  cursor: pointer;
+  color: #b2ebf2;
+  font-size: 14px;
+  border-radius: 4px;
+  transition: all 0.3s;
+  position: relative;
+}
+
+.nav-item:hover {
+  color: #00e5ff;
+  background: rgba(0, 229, 255, 0.1);
+}
+
+.nav-item.active {
+  color: #fff;
+  background: linear-gradient(180deg, rgba(0, 229, 255, 0.2) 0%, rgba(0, 229, 255, 0.05) 100%);
+  border-bottom: 2px solid #00e5ff;
+  font-weight: 500;
+  box-shadow: 0 4px 12px rgba(0, 229, 255, 0.2);
+}
+
+/* Content Styles */
+.content-area {
+  padding: 24px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.toolbar {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 24px;
+  padding: 16px;
+  background: rgba(15, 39, 68, 0.6);
+  border: 1px solid #1e3a5f;
+  border-radius: 8px;
+}
+
+.sync-button {
+  box-shadow: 0 0 15px rgba(0, 229, 255, 0.3);
+  border: none;
+}
+
+.table-wrapper {
+  background: rgba(15, 39, 68, 0.6);
+  padding: 16px;
+  border-radius: 8px;
+  border: 1px solid #1e3a5f;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+/* Modal Customization */
+.site-management-modal .ant-modal-content {
+  border: 1px solid #00e5ff;
+  box-shadow: 0 0 30px rgba(0, 229, 255, 0.2);
+  background-color: #0f2744 !important; /* Ensure background is dark */
+}
+
+.site-management-modal .ant-modal-header {
+  background-color: #0f2744 !important;
+  border-bottom: 1px solid #1e3a5f !important;
+}
+
+.site-management-modal .ant-modal-title {
+  color: #00e5ff !important;
+}
+
+.site-management-modal .ant-modal-close {
+  color: #b2ebf2 !important;
+}
+
+.site-management-modal .ant-modal-close:hover {
+  color: #00e5ff !important;
+}
+
+/* Modal Confirm Specifics */
+.ant-modal-confirm .ant-modal-content {
+  background-color: #0f2744 !important;
+  border: 1px solid #00e5ff;
+}
+
+.ant-modal-confirm .ant-modal-confirm-title {
+  color: #00e5ff !important;
+}
+
+.ant-modal-confirm .ant-modal-confirm-content {
+  color: #e0f7fa !important;
+  font-weight: 500;
+}
+
+.ant-modal-confirm-body .ant-modal-confirm-content {
+  color: #e0f7fa !important;
+}
+
+/* Force override for confirm dialog buttons */
+:where(.css-dev-only-do-not-override-190m0j).ant-modal-confirm .ant-modal-confirm-btns .ant-btn {
+  background-color: transparent !important;
+  border-color: #1e3a5f !important;
+  color: #b2ebf2 !important;
+}
+
+:where(.css-dev-only-do-not-override-190m0j).ant-modal-confirm .ant-modal-confirm-btns .ant-btn-primary {
+  background-color: #00e5ff !important;
+  border-color: #00e5ff !important;
+  color: #050b14 !important;
+}
+
+/* Fallback for production or other hash classes */
+.ant-modal-confirm .ant-modal-confirm-btns .ant-btn {
+  background-color: transparent !important;
+  border-color: #1e3a5f !important;
+  color: #b2ebf2 !important;
+}
+
+.ant-modal-confirm .ant-modal-confirm-btns .ant-btn-primary {
+  background-color: #00e5ff !important;
+  border-color: #00e5ff !important;
+  color: #050b14 !important;
+}
+
+.ant-modal-confirm .ant-modal-confirm-btns .ant-btn:hover {
+  color: #00e5ff !important;
+  border-color: #00e5ff !important;
+}
+
+.ant-modal-confirm .ant-modal-confirm-btns .ant-btn-primary:hover {
+  background-color: #4dd0e1 !important;
+  color: #050b14 !important;
+}
+
+.site-management-modal .ant-descriptions-item-label {
+  background-color: rgba(0, 229, 255, 0.05) !important;
+  color: #b2ebf2 !important;
+}
+
+.site-management-modal .ant-descriptions-item-content {
+  background-color: rgba(0, 0, 0, 0.2) !important;
+  color: #fff !important;
+}
+
+/* Input Placeholder */
+.ant-input::placeholder {
+  color: rgba(178, 235, 242, 0.5) !important;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0a1929; 
+}
+
+::-webkit-scrollbar-thumb {
+  background: #1e3a5f; 
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #00e5ff; 
+}

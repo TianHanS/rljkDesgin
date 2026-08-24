@@ -1,0 +1,322 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-08-07T01:58:56.492Z",
+  "items": {
+    "components/ref-button": {
+      "group": "components",
+      "name": "ref-button",
+      "js": "src/components/ref-button/index.tsx",
+      "html": "src/components/ref-button/index.html"
+    },
+    "components/ref-line-chart": {
+      "group": "components",
+      "name": "ref-line-chart",
+      "js": "src/components/ref-line-chart/index.tsx",
+      "html": "src/components/ref-line-chart/index.html"
+    },
+    "components/side-menu": {
+      "group": "components",
+      "name": "side-menu",
+      "js": "src/components/side-menu/index.tsx",
+      "html": "src/components/side-menu/index.html"
+    },
+    "prototypes/address-management": {
+      "group": "prototypes",
+      "name": "address-management",
+      "js": "src/prototypes/address-management/index.tsx",
+      "html": "src/prototypes/address-management/index.html"
+    },
+    "prototypes/agv-monitoring": {
+      "group": "prototypes",
+      "name": "agv-monitoring",
+      "js": "src/prototypes/agv-monitoring/index.tsx",
+      "html": "src/prototypes/agv-monitoring/index.html"
+    },
+    "prototypes/alarm-query": {
+      "group": "prototypes",
+      "name": "alarm-query",
+      "js": "src/prototypes/alarm-query/index.tsx",
+      "html": "src/prototypes/alarm-query/index.html"
+    },
+    "prototypes/business-message-query": {
+      "group": "prototypes",
+      "name": "business-message-query",
+      "js": "src/prototypes/business-message-query/index.tsx",
+      "html": "src/prototypes/business-message-query/index.html"
+    },
+    "prototypes/coal-blending-bill-management": {
+      "group": "prototypes",
+      "name": "coal-blending-bill-management",
+      "js": "src/prototypes/coal-blending-bill-management/index.tsx",
+      "html": "src/prototypes/coal-blending-bill-management/index.html"
+    },
+    "prototypes/coal-handling-flow-monitor": {
+      "group": "prototypes",
+      "name": "coal-handling-flow-monitor",
+      "js": "src/prototypes/coal-handling-flow-monitor/index.tsx",
+      "html": "src/prototypes/coal-handling-flow-monitor/index.html"
+    },
+    "prototypes/coal-loading-bill-management": {
+      "group": "prototypes",
+      "name": "coal-loading-bill-management",
+      "js": "src/prototypes/coal-loading-bill-management/index.tsx",
+      "html": "src/prototypes/coal-loading-bill-management/index.html"
+    },
+    "prototypes/coal-unloading-management": {
+      "group": "prototypes",
+      "name": "coal-unloading-management",
+      "js": "src/prototypes/coal-unloading-management/index.tsx",
+      "html": "src/prototypes/coal-unloading-management/index.html"
+    },
+    "prototypes/data-monitoring": {
+      "group": "prototypes",
+      "name": "data-monitoring",
+      "js": "src/prototypes/data-monitoring/index.tsx",
+      "html": "src/prototypes/data-monitoring/index.html"
+    },
+    "prototypes/device-realtime-monitor": {
+      "group": "prototypes",
+      "name": "device-realtime-monitor",
+      "js": "src/prototypes/device-realtime-monitor/index.tsx",
+      "html": "src/prototypes/device-realtime-monitor/index.html"
+    },
+    "prototypes/dispatch-task-management": {
+      "group": "prototypes",
+      "name": "dispatch-task-management",
+      "js": "src/prototypes/dispatch-task-management/index.tsx",
+      "html": "src/prototypes/dispatch-task-management/index.html"
+    },
+    "prototypes/dispatch-task-management-01": {
+      "group": "prototypes",
+      "name": "dispatch-task-management-01",
+      "js": "src/prototypes/dispatch-task-management-01/index.tsx",
+      "html": "src/prototypes/dispatch-task-management-01/index.html"
+    },
+    "prototypes/driver-self-service-entry": {
+      "group": "prototypes",
+      "name": "driver-self-service-entry",
+      "js": "src/prototypes/driver-self-service-entry/index.tsx",
+      "html": "src/prototypes/driver-self-service-entry/index.html"
+    },
+    "prototypes/electronic-ticket-scan": {
+      "group": "prototypes",
+      "name": "electronic-ticket-scan",
+      "js": "src/prototypes/electronic-ticket-scan/index.tsx",
+      "html": "src/prototypes/electronic-ticket-scan/index.html"
+    },
+    "prototypes/fuel-handling-shift-competition": {
+      "group": "prototypes",
+      "name": "fuel-handling-shift-competition",
+      "js": "src/prototypes/fuel-handling-shift-competition/index.tsx",
+      "html": "src/prototypes/fuel-handling-shift-competition/index.html"
+    },
+    "prototypes/fuel-handling-shift-report": {
+      "group": "prototypes",
+      "name": "fuel-handling-shift-report",
+      "js": "src/prototypes/fuel-handling-shift-report/index.tsx",
+      "html": "src/prototypes/fuel-handling-shift-report/index.html"
+    },
+    "prototypes/log-query": {
+      "group": "prototypes",
+      "name": "log-query",
+      "js": "src/prototypes/log-query/index.tsx",
+      "html": "src/prototypes/log-query/index.html"
+    },
+    "prototypes/main-dashboard": {
+      "group": "prototypes",
+      "name": "main-dashboard",
+      "js": "src/prototypes/main-dashboard/index.tsx",
+      "html": "src/prototypes/main-dashboard/index.html"
+    },
+    "prototypes/message-config": {
+      "group": "prototypes",
+      "name": "message-config",
+      "js": "src/prototypes/message-config/index.tsx",
+      "html": "src/prototypes/message-config/index.html"
+    },
+    "prototypes/operation-log-management": {
+      "group": "prototypes",
+      "name": "operation-log-management",
+      "js": "src/prototypes/operation-log-management/index.tsx",
+      "html": "src/prototypes/operation-log-management/index.html"
+    },
+    "prototypes/park-point-management": {
+      "group": "prototypes",
+      "name": "park-point-management",
+      "js": "src/prototypes/park-point-management/index.tsx",
+      "html": "src/prototypes/park-point-management/index.html"
+    },
+    "prototypes/platform-workbench": {
+      "group": "prototypes",
+      "name": "platform-workbench",
+      "js": "src/prototypes/platform-workbench/index.tsx",
+      "html": "src/prototypes/platform-workbench/index.html"
+    },
+    "prototypes/platform-workbench-copy": {
+      "group": "prototypes",
+      "name": "platform-workbench-copy",
+      "js": "src/prototypes/platform-workbench-copy/index.tsx",
+      "html": "src/prototypes/platform-workbench-copy/index.html"
+    },
+    "prototypes/ref-antd": {
+      "group": "prototypes",
+      "name": "ref-antd",
+      "js": "src/prototypes/ref-antd/index.tsx",
+      "html": "src/prototypes/ref-antd/index.html"
+    },
+    "prototypes/ref-app-home": {
+      "group": "prototypes",
+      "name": "ref-app-home",
+      "js": "src/prototypes/ref-app-home/index.tsx",
+      "html": "src/prototypes/ref-app-home/index.html"
+    },
+    "prototypes/sample-cabinet": {
+      "group": "prototypes",
+      "name": "sample-cabinet",
+      "js": "src/prototypes/sample-cabinet/index.tsx",
+      "html": "src/prototypes/sample-cabinet/index.html"
+    },
+    "prototypes/site-management": {
+      "group": "prototypes",
+      "name": "site-management",
+      "js": "src/prototypes/site-management/index.tsx",
+      "html": "src/prototypes/site-management/index.html"
+    },
+    "prototypes/team-duty-monthly-competition": {
+      "group": "prototypes",
+      "name": "team-duty-monthly-competition",
+      "js": "src/prototypes/team-duty-monthly-competition/index.tsx",
+      "html": "src/prototypes/team-duty-monthly-competition/index.html"
+    },
+    "prototypes/terminal-management": {
+      "group": "prototypes",
+      "name": "terminal-management",
+      "js": "src/prototypes/terminal-management/index.tsx",
+      "html": "src/prototypes/terminal-management/index.html"
+    },
+    "prototypes/unmanned-lab-monitor": {
+      "group": "prototypes",
+      "name": "unmanned-lab-monitor",
+      "js": "src/prototypes/unmanned-lab-monitor/index.tsx",
+      "html": "src/prototypes/unmanned-lab-monitor/index.html"
+    },
+    "prototypes/vehicle-management": {
+      "group": "prototypes",
+      "name": "vehicle-management",
+      "js": "src/prototypes/vehicle-management/index.tsx",
+      "html": "src/prototypes/vehicle-management/index.html"
+    },
+    "prototypes/video-monitoring": {
+      "group": "prototypes",
+      "name": "video-monitoring",
+      "js": "src/prototypes/video-monitoring/index.tsx",
+      "html": "src/prototypes/video-monitoring/index.html"
+    },
+    "prototypes/workbench-01": {
+      "group": "prototypes",
+      "name": "workbench-01",
+      "js": "src/prototypes/workbench-01/index.tsx",
+      "html": "src/prototypes/workbench-01/index.html"
+    },
+    "themes/antd-new": {
+      "group": "themes",
+      "name": "antd-new",
+      "js": "src/themes/antd-new/index.tsx",
+      "html": "src/themes/antd-new/index.html"
+    },
+    "themes/firecrawl": {
+      "group": "themes",
+      "name": "firecrawl",
+      "js": "src/themes/firecrawl/index.tsx",
+      "html": "src/themes/firecrawl/index.html"
+    },
+    "themes/trae-design": {
+      "group": "themes",
+      "name": "trae-design",
+      "js": "src/themes/trae-design/index.tsx",
+      "html": "src/themes/trae-design/index.html"
+    }
+  },
+  "js": {
+    "components/ref-button": "src/components/ref-button/index.tsx",
+    "components/ref-line-chart": "src/components/ref-line-chart/index.tsx",
+    "components/side-menu": "src/components/side-menu/index.tsx",
+    "prototypes/address-management": "src/prototypes/address-management/index.tsx",
+    "prototypes/agv-monitoring": "src/prototypes/agv-monitoring/index.tsx",
+    "prototypes/alarm-query": "src/prototypes/alarm-query/index.tsx",
+    "prototypes/business-message-query": "src/prototypes/business-message-query/index.tsx",
+    "prototypes/coal-blending-bill-management": "src/prototypes/coal-blending-bill-management/index.tsx",
+    "prototypes/coal-handling-flow-monitor": "src/prototypes/coal-handling-flow-monitor/index.tsx",
+    "prototypes/coal-loading-bill-management": "src/prototypes/coal-loading-bill-management/index.tsx",
+    "prototypes/coal-unloading-management": "src/prototypes/coal-unloading-management/index.tsx",
+    "prototypes/data-monitoring": "src/prototypes/data-monitoring/index.tsx",
+    "prototypes/device-realtime-monitor": "src/prototypes/device-realtime-monitor/index.tsx",
+    "prototypes/dispatch-task-management": "src/prototypes/dispatch-task-management/index.tsx",
+    "prototypes/dispatch-task-management-01": "src/prototypes/dispatch-task-management-01/index.tsx",
+    "prototypes/driver-self-service-entry": "src/prototypes/driver-self-service-entry/index.tsx",
+    "prototypes/electronic-ticket-scan": "src/prototypes/electronic-ticket-scan/index.tsx",
+    "prototypes/fuel-handling-shift-competition": "src/prototypes/fuel-handling-shift-competition/index.tsx",
+    "prototypes/fuel-handling-shift-report": "src/prototypes/fuel-handling-shift-report/index.tsx",
+    "prototypes/log-query": "src/prototypes/log-query/index.tsx",
+    "prototypes/main-dashboard": "src/prototypes/main-dashboard/index.tsx",
+    "prototypes/message-config": "src/prototypes/message-config/index.tsx",
+    "prototypes/operation-log-management": "src/prototypes/operation-log-management/index.tsx",
+    "prototypes/park-point-management": "src/prototypes/park-point-management/index.tsx",
+    "prototypes/platform-workbench": "src/prototypes/platform-workbench/index.tsx",
+    "prototypes/platform-workbench-copy": "src/prototypes/platform-workbench-copy/index.tsx",
+    "prototypes/ref-antd": "src/prototypes/ref-antd/index.tsx",
+    "prototypes/ref-app-home": "src/prototypes/ref-app-home/index.tsx",
+    "prototypes/sample-cabinet": "src/prototypes/sample-cabinet/index.tsx",
+    "prototypes/site-management": "src/prototypes/site-management/index.tsx",
+    "prototypes/team-duty-monthly-competition": "src/prototypes/team-duty-monthly-competition/index.tsx",
+    "prototypes/terminal-management": "src/prototypes/terminal-management/index.tsx",
+    "prototypes/unmanned-lab-monitor": "src/prototypes/unmanned-lab-monitor/index.tsx",
+    "prototypes/vehicle-management": "src/prototypes/vehicle-management/index.tsx",
+    "prototypes/video-monitoring": "src/prototypes/video-monitoring/index.tsx",
+    "prototypes/workbench-01": "src/prototypes/workbench-01/index.tsx",
+    "themes/antd-new": "src/themes/antd-new/index.tsx",
+    "themes/firecrawl": "src/themes/firecrawl/index.tsx",
+    "themes/trae-design": "src/themes/trae-design/index.tsx"
+  },
+  "html": {
+    "components/ref-button": "src/components/ref-button/index.html",
+    "components/ref-line-chart": "src/components/ref-line-chart/index.html",
+    "components/side-menu": "src/components/side-menu/index.html",
+    "prototypes/address-management": "src/prototypes/address-management/index.html",
+    "prototypes/agv-monitoring": "src/prototypes/agv-monitoring/index.html",
+    "prototypes/alarm-query": "src/prototypes/alarm-query/index.html",
+    "prototypes/business-message-query": "src/prototypes/business-message-query/index.html",
+    "prototypes/coal-blending-bill-management": "src/prototypes/coal-blending-bill-management/index.html",
+    "prototypes/coal-handling-flow-monitor": "src/prototypes/coal-handling-flow-monitor/index.html",
+    "prototypes/coal-loading-bill-management": "src/prototypes/coal-loading-bill-management/index.html",
+    "prototypes/coal-unloading-management": "src/prototypes/coal-unloading-management/index.html",
+    "prototypes/data-monitoring": "src/prototypes/data-monitoring/index.html",
+    "prototypes/device-realtime-monitor": "src/prototypes/device-realtime-monitor/index.html",
+    "prototypes/dispatch-task-management": "src/prototypes/dispatch-task-management/index.html",
+    "prototypes/dispatch-task-management-01": "src/prototypes/dispatch-task-management-01/index.html",
+    "prototypes/driver-self-service-entry": "src/prototypes/driver-self-service-entry/index.html",
+    "prototypes/electronic-ticket-scan": "src/prototypes/electronic-ticket-scan/index.html",
+    "prototypes/fuel-handling-shift-competition": "src/prototypes/fuel-handling-shift-competition/index.html",
+    "prototypes/fuel-handling-shift-report": "src/prototypes/fuel-handling-shift-report/index.html",
+    "prototypes/log-query": "src/prototypes/log-query/index.html",
+    "prototypes/main-dashboard": "src/prototypes/main-dashboard/index.html",
+    "prototypes/message-config": "src/prototypes/message-config/index.html",
+    "prototypes/operation-log-management": "src/prototypes/operation-log-management/index.html",
+    "prototypes/park-point-management": "src/prototypes/park-point-management/index.html",
+    "prototypes/platform-workbench": "src/prototypes/platform-workbench/index.html",
+    "prototypes/platform-workbench-copy": "src/prototypes/platform-workbench-copy/index.html",
+    "prototypes/ref-antd": "src/prototypes/ref-antd/index.html",
+    "prototypes/ref-app-home": "src/prototypes/ref-app-home/index.html",
+    "prototypes/sample-cabinet": "src/prototypes/sample-cabinet/index.html",
+    "prototypes/site-management": "src/prototypes/site-management/index.html",
+    "prototypes/team-duty-monthly-competition": "src/prototypes/team-duty-monthly-competition/index.html",
+    "prototypes/terminal-management": "src/prototypes/terminal-management/index.html",
+    "prototypes/unmanned-lab-monitor": "src/prototypes/unmanned-lab-monitor/index.html",
+    "prototypes/vehicle-management": "src/prototypes/vehicle-management/index.html",
+    "prototypes/video-monitoring": "src/prototypes/video-monitoring/index.html",
+    "prototypes/workbench-01": "src/prototypes/workbench-01/index.html",
+    "themes/antd-new": "src/themes/antd-new/index.html",
+    "themes/firecrawl": "src/themes/firecrawl/index.html",
+    "themes/trae-design": "src/themes/trae-design/index.html"
+  }
+}

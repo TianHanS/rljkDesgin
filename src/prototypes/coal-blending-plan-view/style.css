@@ -1,0 +1,147 @@
+.cbpv-page {
+  min-height: 100vh;
+  padding: 24px 28px;
+  background:
+    radial-gradient(circle at 12% 0%, rgba(22, 119, 255, 0.06), transparent 42%),
+    linear-gradient(180deg, #f5f7fa 0%, #eef2f6 100%);
+  color: #1f2937;
+  font-family: "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+}
+
+.cbpv-page-hd {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  max-width: 960px;
+}
+
+.cbpv-page-hd h1 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.cbpv-page-hd p {
+  margin: 8px 0 0;
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.cbpv-section {
+  border: 1px solid #e5ebf0;
+  border-radius: 10px;
+  background: #fff;
+  padding: 14px 16px;
+}
+
+.cbpv-section-grow {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.cbpv-section-hd {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.cbpv-section-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #1f2a37;
+}
+
+.cbpv-section-title::before {
+  content: "";
+  display: inline-block;
+  width: 3px;
+  height: 12px;
+  margin-right: 8px;
+  border-radius: 2px;
+  background: #1677ff;
+  vertical-align: -1px;
+}
+
+.cbpv-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px 16px;
+  margin-top: 12px;
+}
+
+.cbpv-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.cbpv-item .k {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.cbpv-item .v {
+  font-size: 13px;
+  color: #111827;
+  word-break: break-all;
+}
+
+.cbpv-table-wrap {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
+.cbpv-matrix .ant-table-thead > tr > th {
+  background: #e8f1ff !important;
+  color: #1f2a37;
+  font-weight: 700;
+  text-align: center;
+}
+
+.cbpv-matrix .ant-table-tbody > tr > td {
+  text-align: center;
+}
+
+.cbpv-matrix .cbpv-row-label {
+  background: #f8fafc;
+  text-align: left !important;
+}
+
+.cbpv-row-label-text {
+  font-weight: 600;
+  color: #374151;
+}
+
+.cbpv-num {
+  font-variant-numeric: tabular-nums;
+  font-family: "DIN Alternate", "Segoe UI", system-ui, sans-serif;
+}
+
+.cbpv-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.cbpv-footer-hint {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+@media (max-width: 840px) {
+  .cbpv-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .cbpv-page-hd {
+    flex-direction: column;
+  }
+}

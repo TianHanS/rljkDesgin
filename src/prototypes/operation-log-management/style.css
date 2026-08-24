@@ -1,0 +1,52 @@
+@import "tailwindcss";
+
+.operation-log-management-root {
+  font-family: "Microsoft YaHei", "PingFang SC", ui-sans-serif, system-ui, sans-serif;
+}
+
+.operation-log-management-root .custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.operation-log-management-root .custom-scrollbar::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.5);
+  border-radius: 4px;
+}
+
+.operation-log-management-root .custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(34, 211, 238, 0.25);
+  border-radius: 4px;
+}
+
+.operation-log-management-root .olm-drawer .ant-drawer-content {
+  background: #0a1020;
+}
+
+.operation-log-management-root .olm-drawer .ant-drawer-header {
+  border-bottom: 1px solid rgba(34, 211, 238, 0.2);
+  background: #0f172a;
+}
+
+.operation-log-management-root .olm-drawer .ant-drawer-title {
+  color: #e2e8f0;
+}
+
+.operation-log-management-root .olm-drawer .ant-drawer-body {
+  background: #0a1020;
+}
+
+.operation-log-management-root .olm-form-label-required::before {
+  display: inline-block;
+  margin-inline-end: 4px;
+  color: #f87171;
+  content: "*";
+}
+
+.operation-log-management-root .ant-table-wrapper .ant-table {
+  background: transparent;
+}
+
+.operation-log-management-root .ant-pagination-item-active {
+  border-color: rgba(34, 211, 238, 0.6);
+}

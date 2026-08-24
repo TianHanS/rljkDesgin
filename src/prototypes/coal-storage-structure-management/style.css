@@ -716,6 +716,24 @@
   background: #fff1f0;
 }
 
+/* 拆分表格中由系统锁定／联动的角度，与可输入的起始角度形成明确区分 */
+.cssm-locked-angle {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  color: var(--coal-ink-faint);
+}
+
+.cssm-locked-angle em {
+  font-style: normal;
+  font-size: 10px;
+  padding: 1px 4px;
+  border-radius: 3px;
+  background: var(--yard-inset);
+  color: var(--coal-ink-ghost);
+  white-space: nowrap;
+}
+
 .cssm-grid-2 {
   display: grid;
   gap: 0 12px;

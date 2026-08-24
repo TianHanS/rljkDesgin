@@ -127,22 +127,24 @@ const SplitLayerDrawer: React.FC<Props> = ({
     {
       title: '结束角度 °',
       key: 'pitchEnd',
-      width: 116,
+      width: 140,
       align: 'right',
       render: (_, r) => (
-        <span className="cssm-num" style={{ color: '#8b847b' }}>
+        <span className="cssm-locked-angle cssm-num">
           {r.pitchEnd.toFixed(2)}
+          <em>{r.index === 0 ? '锁定层顶' : '取上层起始角'}</em>
         </span>
       ),
     },
     {
       title: '起始角度 °',
       key: 'pitchStart',
-      width: 132,
+      width: 150,
       render: (_, r) =>
         r.startLocked ? (
-          <span className="cssm-num" style={{ color: '#8b847b' }}>
+          <span className="cssm-locked-angle cssm-num">
             {r.pitchStart.toFixed(2)}
+            <em>锁定层底</em>
           </span>
         ) : (
           <InputNumber
@@ -152,9 +154,11 @@ const SplitLayerDrawer: React.FC<Props> = ({
             precision={2}
             status={r.pitchStart >= r.pitchEnd ? 'error' : undefined}
             value={starts[r.index]}
-            onChange={(v) =>
-              setStarts((prev) => prev.map((x, i) => (i === r.index ? Number(v ?? 0) : x)))
-            }
+            // 清空或输入中间态时 antd 给出 null，此时保留原值，避免数值被弹回 0
+            onChange={(v) => {
+              if (v === null || v === undefined) return;
+              setStarts((prev) => prev.map((x, i) => (i === r.index ? Number(v) : x)));
+            }}
           />
         ),
     },
@@ -282,7 +286,10 @@ const SplitLayerDrawer: React.FC<Props> = ({
 
           <h3 className="cssm-drawer-h3">
             分层信息
-            <span>点击「入厂登记编号」下拉可为各子层选择对应入厂批次，留空则该子层保持待标记</span>
+            <span>
+              仅「起始角度」需要输入（末层锁定为原层底角）；「结束角度」自动取上一层的起始角度。
+              点击「入厂登记编号」下拉可为各子层选择对应入厂批次，留空则该子层保持待标记
+            </span>
           </h3>
 
           <Space style={{ marginBottom: 10 }}>

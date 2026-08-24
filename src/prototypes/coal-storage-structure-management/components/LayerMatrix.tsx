@@ -1,9 +1,9 @@
 /**
- * 存煤结构热力块状表格
+ * 分层视图（存煤结构热力格图）
  *
- * 列为分区（按分区序号从小到大自左向右），行为煤层层序（自下而上，底层在最下一行）。
- * 格内背景色沿用「色族=煤种、色阶=批次」规则，格内下方细条按层厚相对全场最大堆高渲染，
- * 使颜色之外仍有可读的量化信号（兼顾色盲用户）。
+ * 列为分区（分区编号增序自左向右），行为煤层层序（自下而上，底层在最下一行）。
+ * 格内背景色沿用「色族 = 库存煤种、色阶 = 入厂登记编号」规则，
+ * 并在缩略信息之下直接给出该层的层厚与标高区间数值。
  */
 
 import React from 'react';
@@ -13,19 +13,19 @@ import type { ComputedZone } from '../model';
 interface Props {
   zones: ComputedZone[];
   labelOf: (layerId: string) => string;
+  tipOf: (layerId: string) => string;
   selectedLayerId: string | null;
   onSelect: (zoneId: string, layerId: string) => void;
 }
 
-const LayerMatrix: React.FC<Props> = ({ zones, labelOf, selectedLayerId, onSelect }) => {
+const LayerMatrix: React.FC<Props> = ({ zones, labelOf, tipOf, selectedLayerId, onSelect }) => {
   const maxLayers = Math.max(1, ...zones.map((z) => z.layers.length));
-  const maxHeight = Math.max(1, ...zones.map((z) => z.stackHeight));
 
   return (
     <div className="cssm-matrix-wrap">
       <div
         className="cssm-matrix"
-        style={{ gridTemplateColumns: `84px repeat(${zones.length}, minmax(98px, 1fr))` }}
+        style={{ gridTemplateColumns: `88px repeat(${zones.length}, minmax(92px, 1fr))` }}
       >
         <div className="cssm-mcell is-head">层序 / 分区</div>
         {zones.map((z) => (
@@ -40,16 +40,13 @@ const LayerMatrix: React.FC<Props> = ({ zones, labelOf, selectedLayerId, onSelec
             <React.Fragment key={`r-${seq}`}>
               <div className="cssm-mcell is-rowhead">
                 <span>第 {seq} 层</span>
-                <span style={{ fontSize: 10, fontWeight: 400, color: '#b3aca3' }}>
-                  {seq === 1 ? '贴地底层' : ''}
-                </span>
+                <span className="cssm-mcell-hint">{seq === 1 ? '贴地底层' : ''}</span>
               </div>
               {zones.map((z) => {
                 const layer = z.layers.find((l) => l.seq === seq);
                 if (!layer) {
                   return <div key={`${z.id}-${seq}`} className="cssm-mcell is-void" />;
                 }
-                const fg = readableText(layer.color);
                 const active = layer.id === selectedLayerId;
                 const unmarked = layer.raw.status === 'unmarked';
                 return (
@@ -63,15 +60,15 @@ const LayerMatrix: React.FC<Props> = ({ zones, labelOf, selectedLayerId, onSelec
                     ]
                       .filter(Boolean)
                       .join(' ')}
-                    style={{ background: layer.color, color: fg }}
+                    style={{ background: layer.color, color: readableText(layer.color) }}
                     role="button"
                     tabIndex={0}
-                    aria-label={`${z.name} 第 ${seq} 层，${
-                      unmarked ? '待标记批次' : layer.raw.batchNo
-                    }`}
-                    title={`${z.name} 第 ${seq} 层 · ${
-                      unmarked ? '待标记批次' : `${layer.raw.batchNo} / ${layer.raw.shipName}`
-                    }\n层厚 ${layer.thickness.toFixed(1)} m · 体积 ${fmt(
+                    aria-label={`${z.name} 第 ${seq} 层，${tipOf(layer.id)}`}
+                    title={`${z.name} 第 ${seq} 层 · ${tipOf(layer.id)}\n层厚 ${layer.thickness.toFixed(
+                      2,
+                    )} m · 标高 ${layer.bound.heightBottom.toFixed(
+                      2,
+                    )} ~ ${layer.bound.heightTop.toFixed(2)} m\n体积 ${fmt(
                       layer.volume,
                     )} m³ · 煤量 ${fmt(layer.mass)} t`}
                     onClick={() => onSelect(z.id, layer.id)}
@@ -82,9 +79,12 @@ const LayerMatrix: React.FC<Props> = ({ zones, labelOf, selectedLayerId, onSelec
                       }
                     }}
                   >
-                    <span className="cssm-mcell-v cssm-num">{labelOf(layer.id)}</span>
-                    <span className="cssm-mcell-h">
-                      <i style={{ width: `${(layer.thickness / maxHeight) * 100}%` }} />
+                    <span className="cssm-mcell-v">{labelOf(layer.id)}</span>
+                    <span className="cssm-mcell-num cssm-num">
+                      层厚 {layer.thickness.toFixed(2)} m
+                    </span>
+                    <span className="cssm-mcell-num cssm-num">
+                      标高 {layer.bound.heightBottom.toFixed(1)}~{layer.bound.heightTop.toFixed(1)} m
                     </span>
                   </div>
                 );
@@ -100,7 +100,7 @@ const LayerMatrix: React.FC<Props> = ({ zones, labelOf, selectedLayerId, onSelec
           </div>
         ))}
 
-        <div className="cssm-mcell is-total">存煤煤量 t</div>
+        <div className="cssm-mcell is-total">存煤量 t</div>
         {zones.map((z) => (
           <div key={`m-${z.id}`} className="cssm-mcell is-total cssm-num">
             {fmt(z.totalMass)}
@@ -110,7 +110,7 @@ const LayerMatrix: React.FC<Props> = ({ zones, labelOf, selectedLayerId, onSelec
         <div className="cssm-mcell is-total">堆煤高度 m</div>
         {zones.map((z) => (
           <div key={`h2-${z.id}`} className="cssm-mcell is-total cssm-num">
-            {z.stackHeight.toFixed(1)}
+            {z.stackHeight.toFixed(2)}
           </div>
         ))}
       </div>

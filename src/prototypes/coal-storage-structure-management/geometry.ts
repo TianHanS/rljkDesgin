@@ -1,36 +1,45 @@
 /**
- * 直扇形楔煤堆几何模型
+ * 圆形煤场扇形楔煤堆几何模型
  *
- * 斗轮堆取料机沿轨道行走堆煤，煤堆形态为「等腰梯形直段 + 两端半锥」，
- * 工程上称直扇形楔。两端半锥合并后恰为一个完整圆锥，因此：
+ * 圆形封闭煤场由中心堆料塔上的悬臂绕中心回转堆煤，煤场沿周向均分为 36 个分区，
+ * 每个分区张角 10°。分区内煤堆为一个扇形楔：径向断面是等腰梯形（底宽 = 外半径 − 内半径，
+ * 边坡由燃煤安息角决定），沿周向张开 Δα。按 Pappus 定理，扇形楔体积为
  *
- *   V(h) = A(h) · L + π·h³ / (3·tan²θ)
- *   A(h) = h · (W - h/tanθ)          // 等腰梯形截面积，顶宽 = W - 2h/tanθ
+ *   V(h) = Δα · r̄ · A(h)
+ *   A(h) = h · (W − h/tanθ)        径向断面积，顶宽 = W − 2h/tanθ
+ *   r̄   = Ri + W/2                 断面形心半径
  *
- * 煤层分界面由堆料时臂架俯仰角决定，故堆高与俯仰角互为反函数：
+ * 煤层分界面由堆料时悬臂俯仰角决定，故堆高与俯仰角互为反函数：
  *   h = pivotHeight + armReach · tan(φ)
  *
  * 参考资料：
  * - /rules/design-guide.md
- * - 用户提供的存煤结构管理业务描述（直扇形楔几何关系、俯仰角反算）
+ * - 用户提供的存煤结构管理业务描述（圆形煤场 36 分区、20 m 堆高上限、10 cm 分带热力图）
  */
 
 export interface ZoneGeometry {
-  /** 堆煤直段长度（沿轨道方向）m */
-  runLength: number;
-  /** 堆底宽度（挡煤墙净间距）m */
-  baseWidth: number;
+  /** 分区张角 °（36 分区即 10°） */
+  sectorAngle: number;
+  /** 煤场内半径（中心堆料塔基础）m */
+  innerRadius: number;
+  /** 煤场外半径（挡煤墙）m */
+  outerRadius: number;
   /** 燃煤自然安息角 ° */
   reposeAngle: number;
   /** 挡煤墙高度 m */
   wallHeight: number;
   /** 允许最大堆煤高度 m */
   maxStackHeight: number;
-  /** 斗轮机回转中心高度 m */
+  /** 悬臂俯仰铰点高度 m */
   pivotHeight: number;
-  /** 臂架水平投影长度 m */
+  /** 悬臂水平投影长度 m */
   armReach: number;
 }
+
+/** 实际堆煤视图的分带高度 m（20 m 上限划分为 200 个 10 cm 方块） */
+export const BAND_HEIGHT = 0.1;
+/** 分带总数 */
+export const BAND_COUNT = 200;
 
 const toRad = (deg: number) => (deg * Math.PI) / 180;
 const toDeg = (rad: number) => (rad * 180) / Math.PI;
@@ -38,26 +47,31 @@ const toDeg = (rad: number) => (rad * 180) / Math.PI;
 /** 安息角对应的边坡系数 tanθ */
 export const slopeFactor = (g: ZoneGeometry) => Math.tan(toRad(g.reposeAngle));
 
-/** 梯形截面在堆高 h 处的顶宽（m），堆成三角形后归零 */
-export const crestWidth = (g: ZoneGeometry, h: number) =>
-  Math.max(0, g.baseWidth - (2 * h) / slopeFactor(g));
+/** 径向堆底宽度 m */
+export const baseWidth = (g: ZoneGeometry) => g.outerRadius - g.innerRadius;
 
-/** 梯形截面积 m² */
+/** 径向断面形心半径 m */
+export const centroidRadius = (g: ZoneGeometry) => g.innerRadius + baseWidth(g) / 2;
+
+/** 堆高 h 处的径向顶宽 m，堆成三角形后归零 */
+export const crestWidth = (g: ZoneGeometry, h: number) =>
+  Math.max(0, baseWidth(g) - (2 * h) / slopeFactor(g));
+
+/** 径向断面积 m² */
 export const sectionArea = (g: ZoneGeometry, h: number) => {
-  const k = slopeFactor(g);
-  const triangleHeight = (g.baseWidth * k) / 2;
   if (h <= 0) return 0;
-  // 超过临界高度后截面退化为三角形，面积不再增长
-  if (h >= triangleHeight) return (g.baseWidth * triangleHeight) / 2;
-  return h * (g.baseWidth - h / k);
+  const W = baseWidth(g);
+  const k = slopeFactor(g);
+  const triangleHeight = (W * k) / 2;
+  // 超过临界高度后断面退化为三角形，面积不再增长
+  if (h >= triangleHeight) return (W * triangleHeight) / 2;
+  return h * (W - h / k);
 };
 
-/** 堆高 h 对应的煤堆体积 m³ */
+/** 堆高 h 对应的分区煤堆体积 m³ */
 export const stackVolume = (g: ZoneGeometry, h: number) => {
   if (h <= 0) return 0;
-  const k = slopeFactor(g);
-  const cone = (Math.PI * h ** 3) / (3 * k ** 2);
-  return sectionArea(g, h) * g.runLength + cone;
+  return toRad(g.sectorAngle) * centroidRadius(g) * sectionArea(g, h);
 };
 
 /** 分区几何容量（堆至允许最大堆高）m³ */
@@ -77,17 +91,23 @@ export const heightFromVolume = (g: ZoneGeometry, volume: number) => {
   return (lo + hi) / 2;
 };
 
-/** 堆高 → 臂架俯仰角 ° */
+/** 堆高 → 悬臂俯仰角 ° */
 export const pitchFromHeight = (g: ZoneGeometry, h: number) =>
   toDeg(Math.atan((h - g.pivotHeight) / g.armReach));
 
-/** 臂架俯仰角 ° → 堆高 m */
+/** 悬臂俯仰角 ° → 堆高 m */
 export const heightFromPitch = (g: ZoneGeometry, pitch: number) =>
   g.pivotHeight + g.armReach * Math.tan(toRad(pitch));
 
-/** 俯仰角 → 体积（用于「按角度配置煤层」时反算煤量） */
+/** 俯仰角 ° → 累计体积 m³（用于按角度配置煤层时反算煤量） */
 export const volumeFromPitch = (g: ZoneGeometry, pitch: number) =>
   stackVolume(g, Math.max(0, heightFromPitch(g, pitch)));
+
+/** 俯仰角可用区间 ° */
+export const pitchRange = (g: ZoneGeometry) => ({
+  min: pitchFromHeight(g, 0),
+  max: pitchFromHeight(g, g.maxStackHeight),
+});
 
 export interface LayerBoundary {
   /** 层底累计体积 m³ */
@@ -98,9 +118,9 @@ export interface LayerBoundary {
   heightBottom: number;
   /** 层顶标高 m */
   heightTop: number;
-  /** 层底分界俯仰角 ° */
+  /** 起始（层底）俯仰角 ° */
   pitchBottom: number;
-  /** 层顶分界俯仰角 ° */
+  /** 结束（层顶）俯仰角 ° */
   pitchTop: number;
 }
 
@@ -127,40 +147,9 @@ export const resolveBoundaries = (g: ZoneGeometry, volumes: number[]): LayerBoun
   });
 };
 
-/* ============================ 剖面绘制辅助 ============================ */
+/** 标高 → 10 cm 分带序号（0 为贴地第一带） */
+export const bandIndexOf = (height: number) =>
+  Math.min(BAND_COUNT - 1, Math.max(0, Math.floor(height / BAND_HEIGHT)));
 
-export type Point = [number, number];
-
-/**
- * 半平面裁剪（Sutherland–Hodgman），保留 f(p) >= 0 的一侧。
- * 用于让倾斜的煤层分界线被梯形轮廓自然裁剪。
- */
-export const clipHalfPlane = (poly: Point[], f: (p: Point) => number): Point[] => {
-  const out: Point[] = [];
-  const n = poly.length;
-  for (let i = 0; i < n; i += 1) {
-    const a = poly[i];
-    const b = poly[(i + 1) % n];
-    const fa = f(a);
-    const fb = f(b);
-    if (fa >= 0) out.push(a);
-    if (fa >= 0 !== fb >= 0) {
-      const t = fa / (fa - fb);
-      out.push([a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t]);
-    }
-  }
-  return out;
-};
-
-/** 多边形转 SVG points 属性 */
-export const toPoints = (poly: Point[]) =>
-  poly.map(([x, y]) => `${x.toFixed(2)},${y.toFixed(2)}`).join(' ');
-
-/**
- * 俯仰角 → 剖面上分界线的视觉斜率。
- * 保留角度差异的可读性，同时把倾斜幅度压在克制的范围内。
- */
-export const pitchToSlope = (pitch: number) => {
-  const raw = Math.tan(toRad(pitch)) * 0.34;
-  return Math.max(-0.26, Math.min(0.26, raw));
-};
+/** 分带序号 → 该带中心标高 m */
+export const bandCenterHeight = (index: number) => (index + 0.5) * BAND_HEIGHT;

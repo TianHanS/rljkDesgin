@@ -11,13 +11,15 @@ import * as geo from '../geometry';
 import { fmt, readableText } from '../data';
 import type { ComputedLayer, ComputedZone } from '../model';
 
-const COL_W = 196;
 const BAND_PX = 2.4;
-const AXIS_L = 52;
-const AXIS_R = 62;
-const AXIS_B = 36;
 const PAD_T = 16;
 const PLOT_H = geo.BAND_COUNT * BAND_PX;
+
+/** 圆形 36 列用窄列横向滚动；条形 3 列用宽列撑满主区 */
+const layoutOf = (zoneCount: number) =>
+  zoneCount > 8
+    ? { compact: true, colW: 34, axisL: 48, axisR: 58, axisB: 28, labelSize: 8.5, axisSize: 9.5 }
+    : { compact: false, colW: 196, axisL: 52, axisR: 62, axisB: 36, labelSize: 11, axisSize: 12 };
 
 interface Props {
   zones: ComputedZone[];
@@ -54,8 +56,10 @@ const StackHeatmap: React.FC<Props> = ({
   onSelect,
 }) => {
   const g = zones[0]?.geometry;
-  const width = AXIS_L + zones.length * COL_W + AXIS_R;
-  const height = PAD_T + PLOT_H + AXIS_B;
+  const layout = layoutOf(zones.length);
+  const { colW, axisL, axisR, axisB, compact, labelSize, axisSize } = layout;
+  const width = axisL + zones.length * colW + axisR;
+  const height = PAD_T + PLOT_H + axisB;
   const plotBottom = PAD_T + PLOT_H;
 
   const yOfHeight = (h: number) => plotBottom - (h / geo.BAND_HEIGHT) * BAND_PX;
@@ -66,7 +70,7 @@ const StackHeatmap: React.FC<Props> = ({
   const heightTicks = Array.from({ length: 11 }, (_, i) => i * 2);
 
   return (
-    <div className="cssm-heatmap-wrap">
+    <div className={`cssm-heatmap-wrap${compact ? ' is-compact' : ' is-wide'}`}>
       <svg
         width={width}
         height={height}
@@ -77,9 +81,9 @@ const StackHeatmap: React.FC<Props> = ({
       >
         {/* 场坪与绘图区 */}
         <rect
-          x={AXIS_L}
+          x={axisL}
           y={PAD_T}
-          width={zones.length * COL_W}
+          width={zones.length * colW}
           height={PLOT_H}
           fill="#faf9f7"
           stroke="rgba(38,35,32,0.16)"
@@ -89,9 +93,9 @@ const StackHeatmap: React.FC<Props> = ({
         {Array.from({ length: g.maxStackHeight }, (_, i) => i + 1).map((m) => (
           <line
             key={`grid-${m}`}
-            x1={AXIS_L}
+            x1={axisL}
             y1={yOfHeight(m)}
-            x2={AXIS_L + zones.length * COL_W}
+            x2={axisL + zones.length * colW}
             y2={yOfHeight(m)}
             stroke="rgba(38,35,32,0.06)"
           />
@@ -101,24 +105,24 @@ const StackHeatmap: React.FC<Props> = ({
         {heightTicks.map((m) => (
           <g key={`tick-${m}`}>
             <line
-              x1={AXIS_L - 5}
+              x1={axisL - 5}
               y1={yOfHeight(m)}
-              x2={AXIS_L}
+              x2={axisL}
               y2={yOfHeight(m)}
               stroke="rgba(38,35,32,0.3)"
             />
-            <text x={AXIS_L - 9} y={yOfHeight(m) + 3.4} textAnchor="end" fontSize={9.5} fill="#8b847b">
+            <text x={axisL - 9} y={yOfHeight(m) + 3.4} textAnchor="end" fontSize={9.5} fill="#8b847b">
               {m}
             </text>
             <line
-              x1={AXIS_L + zones.length * COL_W}
+              x1={axisL + zones.length * colW}
               y1={yOfHeight(m)}
-              x2={AXIS_L + zones.length * COL_W + 5}
+              x2={axisL + zones.length * colW + 5}
               y2={yOfHeight(m)}
               stroke="rgba(38,35,32,0.3)"
             />
             <text
-              x={AXIS_L + zones.length * COL_W + 9}
+              x={axisL + zones.length * colW + 9}
               y={yOfHeight(m) + 3.4}
               fontSize={9.5}
               fill="#8b847b"
@@ -128,16 +132,16 @@ const StackHeatmap: React.FC<Props> = ({
             </text>
           </g>
         ))}
-        <text x={AXIS_L - 9} y={PAD_T - 5} textAnchor="end" fontSize={9} fill="#b3aca3">
+        <text x={axisL - 9} y={PAD_T - 5} textAnchor="end" fontSize={9} fill="#b3aca3">
           堆煤高度 m
         </text>
-        <text x={AXIS_L + zones.length * COL_W + 9} y={PAD_T - 5} fontSize={9} fill="#b3aca3">
+        <text x={axisL + zones.length * colW + 9} y={PAD_T - 5} fontSize={9} fill="#b3aca3">
           俯仰角度
         </text>
 
         {/* 分区列 */}
         {zones.map((zone, ci) => {
-          const x = AXIS_L + ci * COL_W;
+          const x = axisL + ci * colW;
           const runs = runsByZone[ci];
           return (
             <g key={zone.id}>
@@ -190,7 +194,7 @@ const StackHeatmap: React.FC<Props> = ({
                           key={band}
                           x={x + 1.5}
                           y={plotBottom - (band + 1) * BAND_PX}
-                          width={COL_W - 3}
+                          width={colW - 3}
                           height={BAND_PX - 0.45}
                           fill={run.layer.color}
                           opacity={isUnmarked && band % 2 === 1 ? 0.6 : 1}
@@ -202,18 +206,18 @@ const StackHeatmap: React.FC<Props> = ({
                     <line
                       x1={x + 1.5}
                       y1={yTop}
-                      x2={x + COL_W - 1.5}
+                      x2={x + colW - 1.5}
                       y2={yTop}
                       stroke="rgba(38,35,32,0.45)"
                       strokeWidth={0.9}
                     />
 
-                    {runHeight >= 18 && label && (
+                    {runHeight >= (compact ? 15 : 18) && label && (
                       <text
-                        x={x + COL_W / 2}
-                        y={yTop + runHeight / 2 + 4}
+                        x={x + colW / 2}
+                        y={yTop + runHeight / 2 + (compact ? 3 : 4)}
                         textAnchor="middle"
-                        fontSize={11}
+                        fontSize={labelSize}
                         fontWeight={600}
                         fill={readableText(run.layer.color)}
                       >
@@ -225,7 +229,7 @@ const StackHeatmap: React.FC<Props> = ({
                       <rect
                         x={x + 1.5}
                         y={yTop}
-                        width={COL_W - 3}
+                        width={colW - 3}
                         height={runHeight}
                         fill="none"
                         stroke="#1677ff"
@@ -238,41 +242,57 @@ const StackHeatmap: React.FC<Props> = ({
 
               {/* 底轴：分区编号增序 */}
               <text
-                x={x + COL_W / 2}
-                y={plotBottom + 16}
+                x={x + colW / 2}
+                y={plotBottom + (compact ? 13 : 16)}
                 textAnchor="middle"
-                fontSize={12}
-                fontWeight={600}
-                fill="#5b554e"
+                fontSize={compact ? 9.5 : axisSize}
+                fontWeight={compact ? (zone.code % 5 === 0 ? 600 : 400) : 600}
+                fill={compact && zone.code % 5 !== 0 ? '#8b847b' : '#5b554e'}
               >
-                {zone.name}
+                {compact ? zone.code : zone.name}
               </text>
               <text
-                x={x + COL_W / 2}
-                y={plotBottom + 30}
+                x={x + colW / 2}
+                y={plotBottom + (compact ? 24 : 30)}
                 textAnchor="middle"
-                fontSize={10}
+                fontSize={compact ? 8 : 10}
                 fill="#b3aca3"
               >
-                {zone.stackHeight > 0.05 ? `${zone.stackHeight.toFixed(1)} m` : '—'}
+                {zone.stackHeight > 0.05
+                  ? compact
+                    ? zone.stackHeight.toFixed(1)
+                    : `${zone.stackHeight.toFixed(1)} m`
+                  : '—'}
               </text>
             </g>
           );
         })}
 
         <line
-          x1={AXIS_L}
+          x1={axisL}
           y1={plotBottom}
-          x2={AXIS_L + zones.length * COL_W}
+          x2={axisL + zones.length * colW}
           y2={plotBottom}
           stroke="rgba(38,35,32,0.34)"
           strokeWidth={1.2}
         />
-        <text x={AXIS_L - 9} y={plotBottom + 16} textAnchor="end" fontSize={10} fill="#b3aca3">
+        <text
+          x={axisL - 9}
+          y={plotBottom + (compact ? 13 : 16)}
+          textAnchor="end"
+          fontSize={compact ? 9 : 10}
+          fill="#b3aca3"
+        >
           分区
         </text>
-        <text x={AXIS_L - 9} y={plotBottom + 30} textAnchor="end" fontSize={9} fill="#b3aca3">
-          堆高
+        <text
+          x={axisL - 9}
+          y={plotBottom + (compact ? 24 : 30)}
+          textAnchor="end"
+          fontSize={compact ? 8 : 9}
+          fill="#b3aca3"
+        >
+          {compact ? '堆高 m' : '堆高'}
         </text>
       </svg>
     </div>

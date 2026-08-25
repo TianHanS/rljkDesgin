@@ -272,7 +272,9 @@ const SurveyDrawer: React.FC<Props> = ({
       <h3 className="cssm-drawer-h3">
         分区盘煤体积
         <span>
-          当前煤场仅 {scoped.length} 个分区，默认列出全部
+          {scoped.length > 8
+            ? '圆形煤场按扇区连续作业，一个盘煤周期内通常只有少数扇区发生堆取'
+            : `当前煤场仅 ${scoped.length} 个分区，默认列出全部`}
           <Button
             type="link"
             size="small"
@@ -288,7 +290,11 @@ const SurveyDrawer: React.FC<Props> = ({
       <Table<VolumeRow>
         rowKey="key"
         size="small"
-        pagination={false}
+        pagination={
+          scoped.length > 8
+            ? { pageSize: 12, showSizeChanger: false, showTotal: (t) => `共 ${t} 个分区` }
+            : false
+        }
         columns={volumeColumns}
         dataSource={tableRows}
         scroll={{ x: 900 }}

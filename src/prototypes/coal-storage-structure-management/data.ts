@@ -1,7 +1,7 @@
 /**
  * 煤场存煤结构管理 · 领域数据与配色体系
  *
- * 煤场形态：两个圆形封闭煤场 + 一个条形煤场，每个煤场仅 2～3 个分区，堆煤高度上限 20 m。
+ * 煤场形态：#1 / #2 圆形封闭煤场各 36 个分区（每区 10°），厂外中转煤场为条形 3 分区，堆煤高度上限 20 m。
  *
  * 配色规则（化解「同批次同色」与「同煤质同色」两条要求的冲突）：
  *   色族 = 库存煤种（煤质类别），色阶 = 入厂登记编号（批次）
@@ -272,7 +272,7 @@ export interface CoalYard {
   shortName: string;
   /** 圆形 / 条形 */
   shape: YardShape;
-  /** 分区数量，2 或 3 */
+  /** 分区数量：圆形 36，条形 3 */
   zoneCount: number;
   /** 是否具备激光盘煤数据源 */
   hasSurvey: boolean;
@@ -286,10 +286,10 @@ export interface CoalYard {
 export const YARDS: CoalYard[] = [
   {
     id: 'Y1',
-    name: '#1 圆形煤场（Φ130 m · 3 分区）',
+    name: '#1 圆形煤场（Φ130 m · 36 分区 · 每区 10°）',
     shortName: '#1 圆形煤场',
     shape: 'circular',
-    zoneCount: 3,
+    zoneCount: 36,
     hasSurvey: true,
     surveyAt: '2026-08-24 06:30',
     lastSurveyAt: '2026-08-17 06:30',
@@ -297,10 +297,10 @@ export const YARDS: CoalYard[] = [
   },
   {
     id: 'Y2',
-    name: '#2 圆形煤场（Φ130 m · 2 分区）',
+    name: '#2 圆形煤场（Φ130 m · 36 分区 · 每区 10°）',
     shortName: '#2 圆形煤场',
     shape: 'circular',
-    zoneCount: 2,
+    zoneCount: 36,
     hasSurvey: true,
     surveyAt: '2026-08-24 07:10',
     lastSurveyAt: '2026-08-17 07:10',
@@ -360,17 +360,49 @@ interface YardFillPlan {
   unmarked: Record<number, number>;
 }
 
+/** 圆形煤场按扇区连续作业，充满度沿周向呈段状分布 */
+const buildFill = (segments: [count: number, value: number][]) => {
+  const out: number[] = [];
+  segments.forEach(([count, value]) => {
+    for (let i = 0; i < count; i += 1) out.push(value);
+  });
+  return out;
+};
+
 const YARD_FILL_PLANS: Record<string, YardFillPlan> = {
   Y1: {
     seed: 20260824,
-    fill: [0.86, 0.62, 0.44],
-    // 2 区连续两个盘煤周期未匹配到入厂批次（两层待标记）；3 区一层待标记
-    unmarked: { 2: 2, 3: 1 },
+    fill: buildFill([
+      [4, 0.9],
+      [4, 0.82],
+      [3, 0.68],
+      [3, 0.55],
+      [4, 0.44],
+      [3, 0.3],
+      [3, 0.18],
+      [2, 0],
+      [4, 0.62],
+      [3, 0.76],
+      [3, 0.86],
+    ]),
+    // 5 区连续两个盘煤周期未匹配到入厂批次，7 区与 22 区各有一层待标记
+    unmarked: { 5: 2, 7: 1, 22: 1 },
   },
   Y2: {
     seed: 20260817,
-    fill: [0.72, 0.38],
-    unmarked: { 1: 1 },
+    fill: buildFill([
+      [3, 0.52],
+      [5, 0.7],
+      [4, 0.86],
+      [3, 0.62],
+      [3, 0.4],
+      [4, 0.24],
+      [3, 0],
+      [4, 0.48],
+      [4, 0.66],
+      [3, 0.58],
+    ]),
+    unmarked: { 12: 1 },
   },
   Y3: {
     seed: 20260801,
@@ -472,11 +504,12 @@ export const createZones = (): CoalZone[] => {
 };
 
 /**
- * 盘煤比对向导的体积变动预填：每个煤场仅 2～3 个分区，默认列出全部。
+ * 盘煤比对向导的体积变动预填：圆形煤场按扇区连续作业，
+ * 一个盘煤周期内通常只有少数几个扇区发生堆取。条形场无盘煤数据源。
  */
 export const SURVEY_DELTA_PLAN: Record<string, Record<number, number>> = {
-  Y1: { 1: 4200, 2: -2800, 3: 3600 },
-  Y2: { 1: 3100, 2: -1800 },
+  Y1: { 3: 620, 7: 480, 14: -520, 21: 700, 28: -340, 33: 410 },
+  Y2: { 5: 540, 11: -460, 18: 390, 24: 280, 31: -300 },
   Y3: {},
 };
 
@@ -515,7 +548,7 @@ export const INITIAL_MOVES: StockMove[] = [
     time: '2026-08-19 21:40',
     type: 'in',
     yardId: 'Y1',
-    zoneName: '3 区',
+    zoneName: '31 区',
     regNo: 'gxsz-2026-054RCDJ2026081802',
     coalTypeName: '神混 1 号',
     volume: 2620,
@@ -528,7 +561,7 @@ export const INITIAL_MOVES: StockMove[] = [
     time: '2026-08-22 09:15',
     type: 'out',
     yardId: 'Y1',
-    zoneName: '2 区',
+    zoneName: '14 区',
     regNo: 'gxsz-2026-054RCDJ2026070902',
     coalTypeName: '准格尔煤',
     volume: 860,
@@ -541,7 +574,7 @@ export const INITIAL_MOVES: StockMove[] = [
     time: '2026-08-24 06:35',
     type: 'in',
     yardId: 'Y1',
-    zoneName: '1 区',
+    zoneName: '19 区',
     regNo: '',
     coalTypeName: '待标记',
     volume: 1180,
@@ -554,7 +587,7 @@ export const INITIAL_MOVES: StockMove[] = [
     time: '2026-08-24 07:15',
     type: 'in',
     yardId: 'Y2',
-    zoneName: '1 区',
+    zoneName: '12 区',
     regNo: '',
     coalTypeName: '待标记',
     volume: 640,
@@ -569,7 +602,7 @@ export const INITIAL_AUDIT: AuditLog[] = [
     id: 'A0001',
     time: '2026-08-24 08:12',
     operator: '田略（燃料专责）',
-    target: '#1 圆形煤场 · 3 区 · 第 3 层',
+    target: '#1 圆形煤场 · 31 区 · 第 3 层',
     action: '标记存煤批次',
     before: '待标记',
     after: 'gxsz-2026-054RCDJ2026081802 / 神混 1 号',
@@ -578,7 +611,7 @@ export const INITIAL_AUDIT: AuditLog[] = [
     id: 'A0002',
     time: '2026-08-23 15:48',
     operator: '王值长（集控值长）',
-    target: '#2 圆形煤场 · 1 区 · 第 2 层',
+    target: '#2 圆形煤场 · 18 区 · 第 2 层',
     action: '分层拆分',
     before: '1 层 · 1 620 m³',
     after: '2 层 · 980 m³ + 640 m³',

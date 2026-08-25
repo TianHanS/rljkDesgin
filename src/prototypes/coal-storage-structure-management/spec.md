@@ -264,5 +264,6 @@ src/prototypes/coal-storage-structure-management/
 - 代码层确认（浏览器难以穷尽的分支）：
   - 删除路径仅调用 `deleteLayer` 与 `pushAudit`，不触及出入库写入，故「直接删除不形成出入库记录」成立；
   - `needSurveyWarning = plan.some(hasSurveyVolume) && yard.hasSurvey`，厂外中转煤场 `hasSurvey: false` 使盘煤仪二次提示条件恒为假，入库直接提交。
+  - 厂外中转煤场 `hasSurvey: false` 时页头「盘煤比对」渲染为 `disabled`，无 `onClick`，抽屉不会打开。
 - `node scripts/check-app-ready.mjs`：在项目级 `tsc` 阶段失败。该失败为**仓库既有问题** —— 对未改动的 `/prototypes/coal-storage-structure` 执行同一脚本同样在 `phase: typecheck` 失败，报错清单一致且不含本原型文件。修复其他原型的历史类型错误超出本次范围，故未处理。
-- 浏览器实测：三视图切换、展示信息切换、煤层点选与检视、盘煤比对、入库（含盘煤仪二次提示）、出库（含煤量不足校验）、分层拆分（角度链式联动）、合并上层/下层、删除（表层限制与二次确认）均已验证；控制台无 React 警告与 antd 弃用告警。
+- 浏览器实测（精简分区版）：左侧圆形定位盘已移除；下拉可切换三个煤场，#1 显示 3 列、#2 显示 2 列、厂外中转显示 3 列，三视图均无 36 列；控制台无报错。

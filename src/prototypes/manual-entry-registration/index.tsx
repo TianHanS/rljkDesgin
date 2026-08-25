@@ -1,5 +1,5 @@
 /**
- * @name 人工入厂登记
+ * @name 燃煤入厂登记
  *
  * 参考资料：
  * - /rules/design-guide.md
@@ -8,9 +8,8 @@
  * - /skills/default-design-guide-minimal/SKILL.md
  * - 用户提供的人工入厂登记截图与功能需求
  */
-import React, { useMemo, useState } from 'react';
+import React, { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
-  Alert,
   Button,
   ConfigProvider,
   DatePicker,
@@ -20,7 +19,6 @@ import {
   Input,
   InputNumber,
   Modal,
-  Segmented,
   Select,
   Space,
   Table,
@@ -34,7 +32,6 @@ import {
   PlusSquareOutlined,
   QrcodeOutlined,
   SafetyCertificateOutlined,
-  SearchOutlined,
   ScanOutlined,
 } from '@ant-design/icons';
 import zhCN from 'antd/locale/zh_CN';
@@ -63,19 +60,12 @@ import {
   type CoalPlan,
   type EntryRecord,
   type PreEntryVehicle,
-  type RegisterMode,
   type SiteConfig,
 } from './data';
 import { applyPlan, isYunyiFresh, parseMineCard, parseYunyi } from './parse';
 import AllowEntryDrawer from './components/AllowEntryDrawer';
 import PlanSelectModal from './components/PlanSelectModal';
 import ScanModal, { type ScanKind } from './components/ScanModal';
-import {
-  ReissuePickModal,
-  SampleCardQueryDrawer,
-  SampleCardWriteModal,
-  type CardLog,
-} from './components/SampleCardModal';
 
 interface FormValues {
   plate?: string;
@@ -105,18 +95,12 @@ const weightRule = [
 const ManualEntryRegistration: React.FC = () => {
   const [form] = Form.useForm<FormValues>();
   const [siteId, setSiteId] = useState(SITES[0].id);
-  const [mode, setMode] = useState<RegisterMode>('incoming');
-  const [vehicles, setVehicles] = useState<PreEntryVehicle[]>(() => PRE_ENTRIES.map((v) => ({ ...v })));
+  const [vehicles, setVehicles] = useState<PreEntryVehicle[]>(() =>
+    PRE_ENTRIES.map((v) => ({ ...v })),
+  );
+  const listBodyRef = useRef<HTMLDivElement>(null);
+  const [tableY, setTableY] = useState(180);
   const [records, setRecords] = useState<EntryRecord[]>(INITIAL_RECORDS);
-  const [cardLogs, setCardLogs] = useState<CardLog[]>([
-    {
-      id: 'C0',
-      plate: '桂A8T216',
-      serialNo: 'RCJ202608250018',
-      writtenAt: '2026-08-25 08:47:01',
-      kind: 'issue',
-    },
-  ]);
   const [planOpen, setPlanOpen] = useState(false);
   const [allowOpen, setAllowOpen] = useState(false);
   const [scan, setScan] = useState<{ open: boolean; kind: ScanKind; loading: boolean }>({
@@ -124,16 +108,7 @@ const ManualEntryRegistration: React.FC = () => {
     kind: 'yunyi',
     loading: false,
   });
-  const [write, setWrite] = useState<{ open: boolean; plate: string; serialNo: string; kind: 'issue' | 'reissue' }>({
-    open: false,
-    plate: '',
-    serialNo: '',
-    kind: 'issue',
-  });
-  const [queryOpen, setQueryOpen] = useState(false);
-  const [reissueOpen, setReissueOpen] = useState(false);
   const [view, setView] = useState<EntryRecord | null>(null);
-  const [log, setLog] = useState('');
   const [scanBusy, setScanBusy] = useState<ScanKind | null>(null);
 
   const site = SITES.find((s) => s.id === siteId) ?? SITES[0];
@@ -295,7 +270,7 @@ const ManualEntryRegistration: React.FC = () => {
     setAllowOpen(false);
   };
 
-  const submit = async (issueCard: boolean) => {
+  const submit = async () => {
     try {
       const values = await form.validateFields();
       const plate = values.plate!.trim();
@@ -322,24 +297,14 @@ const ManualEntryRegistration: React.FC = () => {
         weighPos: values.weighPos || '—',
         samplePos: values.samplePos || '—',
         enterAt: now,
-        status: issueCard ? 'card-issued' : 'registered',
+        status: 'registered',
         entryCard: uploaded,
-        mode,
         siteId: site.id,
       };
       setRecords((list) => [row, ...list]);
-      const lines = [
-        `[模块日志] 入厂登记成功 ${plate} ${serialNo}`,
-        `道闸抬杆 YKEnterBarrierGateUp / YKBarrierGateUp`,
-        `LED 显示：${plate} 登记成功`,
-        `广播播报：${plate} 请入厂，前往${values.samplePos || '采样位'} ${values.weighPos || '过衡位'}`,
-        uploaded ? `上传卡号：${uploaded}（临时卡＞固定卡＞无卡号）` : '未上传入厂卡号',
-      ];
-      setLog(lines.join('\n'));
-      message.success('登记成功');
-      if (issueCard) {
-        setWrite({ open: true, plate, serialNo, kind: 'issue' });
-      }
+      message.success(
+        `登记成功。道闸已抬杆，LED「${plate} 登记成功」，广播「${plate} 请入厂，前往${values.samplePos || '采样位'} ${values.weighPos || '过衡位'}」`,
+      );
     } catch {
       /* antd 已展示校验 */
     }
@@ -348,50 +313,45 @@ const ManualEntryRegistration: React.FC = () => {
   const sampleRequired = site.SAMPLE_MEASURE_EDIT === 1;
   const filteredRecords = records.filter((r) => r.siteId === site.id);
 
+  useLayoutEffect(() => {
+    const el = listBodyRef.current;
+    if (!el) return;
+    const sync = () => {
+      const head = el.querySelector('.ant-table-thead') as HTMLElement | null;
+      const headH = head?.offsetHeight ?? 39;
+      setTableY(Math.max(120, el.clientHeight - headH - 2));
+    };
+    sync();
+    const ro = new ResizeObserver(sync);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [filteredRecords.length, siteId]);
+
   const columns: ColumnsType<EntryRecord> = [
-    { title: '序号', width: 64, render: (_, __, i) => i + 1 },
-    { title: '流水号', dataIndex: 'serialNo', width: 160 },
-    {
-      title: '类型',
-      dataIndex: 'mode',
-      width: 90,
-      render: (m: RegisterMode) => (m === 'transfer' ? <Tag>转场煤</Tag> : <Tag color="blue">来煤</Tag>),
-    },
-    { title: '车牌号', dataIndex: 'plate', width: 110 },
-    { title: '供应商', dataIndex: 'supplier', width: 150, ellipsis: true },
-    { title: '矿点', dataIndex: 'mine', width: 110 },
-    { title: '煤种', dataIndex: 'coalType', width: 90 },
-    { title: '采样方式', dataIndex: 'sampleMethod', width: 100 },
-    { title: '矿发净重(t)', dataIndex: 'net', width: 110 },
-    { title: '过衡位', dataIndex: 'weighPos', width: 110 },
-    { title: '采样位', dataIndex: 'samplePos', width: 130 },
-    { title: '入厂时间', dataIndex: 'enterAt', width: 170 },
+    { title: '序号', width: 56, render: (_, __, i) => i + 1 },
+    { title: '流水号', dataIndex: 'serialNo', width: 150 },
+    { title: '车牌号', dataIndex: 'plate', width: 100 },
+    { title: '供应商', dataIndex: 'supplier', width: 140, ellipsis: true },
+    { title: '矿点', dataIndex: 'mine', width: 100 },
+    { title: '煤种', dataIndex: 'coalType', width: 80 },
+    { title: '采样方式', dataIndex: 'sampleMethod', width: 90 },
+    { title: '矿发净重(t)', dataIndex: 'net', width: 100 },
+    { title: '过衡位', dataIndex: 'weighPos', width: 100 },
+    { title: '采样位', dataIndex: 'samplePos', width: 120 },
+    { title: '入厂时间', dataIndex: 'enterAt', width: 160 },
     {
       title: '状态',
       dataIndex: 'status',
-      width: 100,
-      render: (s: EntryRecord['status']) =>
-        s === 'card-issued' ? <Tag color="processing">已发卡</Tag> : <Tag>已登记</Tag>,
+      width: 80,
+      render: () => <Tag>已登记</Tag>,
     },
     {
       title: '操作',
-      width: 140,
-      fixed: 'right',
+      width: 72,
       render: (_, row) => (
-        <Space>
-          <Button type="link" size="small" onClick={() => setView(row)}>
-            查看
-          </Button>
-          {site.ENABLE_ENTER_SAMPLE_CARD ? (
-            <Button
-              type="link"
-              size="small"
-              onClick={() => setWrite({ open: true, plate: row.plate, serialNo: row.serialNo, kind: 'reissue' })}
-            >
-              补发
-            </Button>
-          ) : null}
-        </Space>
+        <Button type="link" size="small" onClick={() => setView(row)}>
+          查看
+        </Button>
       ),
     },
   ];
@@ -410,47 +370,37 @@ const ManualEntryRegistration: React.FC = () => {
   }, [scan.kind]);
 
   return (
-    <ConfigProvider locale={zhCN}>
+    <ConfigProvider locale={zhCN} componentSize="small">
       <div className="mer-root">
         <header className="mer-head">
-          <div>
-            <h1>人工入厂登记</h1>
-            <p>浅色后台登记台。预入厂后仍禁止入厂的车辆，须先允许入厂再确认登记。</p>
-            <div className="mer-cfg">
-              <Tag>{PLAN_MODE_LABEL[site.GET_PLAN_MSG]}</Tag>
-              <Tag>{ORIGINAL_MODE_LABEL[site.GET_ORIGINAL_MSG]}</Tag>
-              <Tag>{sampleRequired ? '采样过衡位必填' : '采样过衡位非必填'}</Tag>
-              {site.ENABLE_ENTER_CARD ? <Tag color="blue">入厂卡</Tag> : null}
-              {site.ENABLE_ENTER_SAMPLE_CARD ? <Tag color="blue">煤样卡</Tag> : null}
-            </div>
-          </div>
+          <h1>燃煤入厂登记</h1>
           <div className="mer-head-tools">
-            <span style={{ color: 'rgba(0,0,0,.45)', fontSize: 13 }}>入厂点</span>
+            <Tag>{PLAN_MODE_LABEL[site.GET_PLAN_MSG]}</Tag>
+            <Tag>{ORIGINAL_MODE_LABEL[site.GET_ORIGINAL_MSG]}</Tag>
+            <span style={{ color: 'rgba(0,0,0,.45)' }}>入厂点</span>
             <Select
-              style={{ width: 168 }}
+              style={{ width: 148 }}
               value={siteId}
               options={SITES.map((s) => ({ value: s.id, label: s.name }))}
               onChange={(id) => {
                 setSiteId(id);
                 form.resetFields();
                 form.setFieldValue('sampleMethod', '机械采样');
-                setLog('');
               }}
-            />
-            <Segmented
-              value={mode}
-              onChange={(v) => setMode(v as RegisterMode)}
-              options={[
-                { label: '来煤登记', value: 'incoming' },
-                { label: '转场煤登记', value: 'transfer' },
-              ]}
             />
           </div>
         </header>
 
-        <section className="mer-card">
+        <section className="mer-card mer-form-card">
           <div className="mer-card-hd">
-            <h2>登记入厂信息{mode === 'transfer' ? ' · 转场煤' : ''}</h2>
+            <h2>
+              登记入厂信息
+              {livePre?.permit === 'forbidden' ? (
+                <Tag color="error" style={{ marginLeft: 8 }}>
+                  {livePre.plate} 禁止入厂，请先允许入厂
+                </Tag>
+              ) : null}
+            </h2>
             <div className="mer-card-actions">
               {(site.GET_PLAN_MSG === 1 || site.GET_PLAN_MSG === 2) && (
                 <Button icon={<PlusSquareOutlined />} onClick={() => setPlanOpen(true)}>
@@ -478,32 +428,13 @@ const ManualEntryRegistration: React.FC = () => {
               <Button type="primary" ghost icon={<SafetyCertificateOutlined />} onClick={() => setAllowOpen(true)}>
                 允许入厂
               </Button>
-              {site.ENABLE_ENTER_SAMPLE_CARD && (
-                <>
-                  <Button icon={<SearchOutlined />} onClick={() => setQueryOpen(true)}>
-                    煤样卡查询
-                  </Button>
-                  <Button onClick={() => setReissueOpen(true)}>补发煤样卡</Button>
-                </>
-              )}
             </div>
           </div>
 
-          {livePre?.permit === 'forbidden' ? (
-            <Alert
-              type="error"
-              showIcon
-              banner
-              message={`${livePre.plate} 预入厂后仍为禁止入厂登记，请先点「允许入厂」更新许可。`}
-            />
-          ) : null}
-          {livePre?.permit === 'allowed' ? (
-            <Alert type="success" showIcon banner message={`${livePre.plate} 已允许入厂登记`} />
-          ) : null}
-
           <Form
             form={form}
-            layout="vertical"
+            layout="horizontal"
+            colon={false}
             initialValues={{ sampleMethod: '机械采样', gross: 0, tare: 0 }}
             className="mer-card-bd"
           >
@@ -513,16 +444,8 @@ const ManualEntryRegistration: React.FC = () => {
             <div className="mer-form-grid">
               <div>
                 <p className="mer-col-title">来煤信息</p>
-                <Form.Item
-                  label="车牌号码"
-                  name="plate"
-                  rules={[{ required: true, message: '请输入车牌号码' }]}
-                >
-                  <Input
-                    placeholder="请输入或扫码回填"
-                    onBlur={handlePlateMatch}
-                    onPressEnter={handlePlateMatch}
-                  />
+                <Form.Item label="车牌号码" name="plate" rules={[{ required: true, message: '请输入车牌' }]}>
+                  <Input placeholder="输入或扫码回填" onBlur={handlePlateMatch} onPressEnter={handlePlateMatch} />
                 </Form.Item>
                 <Form.Item label="供应商" name="supplier">
                   <Input placeholder="计划回显，可改" />
@@ -534,12 +457,7 @@ const ManualEntryRegistration: React.FC = () => {
                   <Input placeholder="计划回显，可改" />
                 </Form.Item>
                 <Form.Item label="运输单位" name="transporter">
-                  <Select
-                    showSearch
-                    allowClear
-                    placeholder="下拉单选，可模糊匹配"
-                    options={TRANSPORTERS.map((t) => ({ value: t, label: t }))}
-                  />
+                  <Select showSearch allowClear options={TRANSPORTERS.map((t) => ({ value: t, label: t }))} />
                 </Form.Item>
                 <Form.Item label="品名" name="productName">
                   <Input />
@@ -550,24 +468,20 @@ const ManualEntryRegistration: React.FC = () => {
                 <Form.Item label="车辆卡号" name="vehicleCard">
                   <Input />
                 </Form.Item>
-                <Form.Item label="矿发毛重 (t)" name="gross" rules={weightRule}>
-                  <InputNumber style={{ width: '100%' }} min={0} max={199.999} step={0.1} />
+                <Form.Item label="矿发毛重" name="gross" rules={weightRule}>
+                  <InputNumber style={{ width: '100%' }} min={0} max={199.999} step={0.1} addonAfter="t" />
                 </Form.Item>
-                <Form.Item label="矿发皮重 (t)" name="tare" rules={weightRule}>
-                  <InputNumber style={{ width: '100%' }} min={0} max={199.999} step={0.1} />
+                <Form.Item label="矿发皮重" name="tare" rules={weightRule}>
+                  <InputNumber style={{ width: '100%' }} min={0} max={199.999} step={0.1} addonAfter="t" />
                 </Form.Item>
                 <Form.Item
-                  label="矿发净重 (t)"
+                  label="矿发净重"
                   name="net"
-                  rules={[{ required: true, message: '请输入矿发净重' }, ...weightRule]}
+                  rules={[{ required: true, message: '请输入净重' }, ...weightRule]}
                 >
-                  <InputNumber style={{ width: '100%' }} min={0} max={199.999} step={0.1} placeholder="请输入矿发净重(t)" />
+                  <InputNumber style={{ width: '100%' }} min={0} max={199.999} step={0.1} addonAfter="t" />
                 </Form.Item>
-                <Form.Item
-                  label="发站时间"
-                  name="shipTime"
-                  rules={[{ required: true, message: '请选择发站时间' }]}
-                >
+                <Form.Item label="发站时间" name="shipTime" rules={[{ required: true, message: '请选择发站时间' }]}>
                   <DatePicker showTime style={{ width: '100%' }} />
                 </Form.Item>
                 <Form.Item label="发站" name="station">
@@ -576,11 +490,7 @@ const ManualEntryRegistration: React.FC = () => {
               </div>
               <div>
                 <p className="mer-col-title">入厂信息</p>
-                <Form.Item
-                  label="采样方式"
-                  name="sampleMethod"
-                  rules={[{ required: true, message: '请选择采样方式' }]}
-                >
+                <Form.Item label="采样方式" name="sampleMethod" rules={[{ required: true, message: '请选择采样方式' }]}>
                   <Select options={SAMPLE_METHODS.map((t) => ({ value: t, label: t }))} />
                 </Form.Item>
                 <Form.Item
@@ -588,90 +498,64 @@ const ManualEntryRegistration: React.FC = () => {
                   name="samplePos"
                   rules={sampleRequired ? [{ required: true, message: '请选择采样位' }] : []}
                 >
-                  <Select
-                    showSearch
-                    allowClear
-                    placeholder="下拉单选，可模糊匹配"
-                    options={SAMPLE_POSITIONS.map((t) => ({ value: t, label: t }))}
-                  />
+                  <Select showSearch allowClear options={SAMPLE_POSITIONS.map((t) => ({ value: t, label: t }))} />
                 </Form.Item>
                 <Form.Item
                   label="过衡位"
                   name="weighPos"
                   rules={sampleRequired ? [{ required: true, message: '请选择过衡位' }] : []}
                 >
-                  <Select
-                    showSearch
-                    allowClear
-                    placeholder="下拉单选，可模糊匹配"
-                    options={WEIGH_POSITIONS.map((t) => ({ value: t, label: t }))}
-                  />
+                  <Select showSearch allowClear options={WEIGH_POSITIONS.map((t) => ({ value: t, label: t }))} />
                 </Form.Item>
-                <Form.Item
-                  label="卸煤区域"
-                  name="unloadArea"
-                  rules={[{ required: true, message: '请选择卸煤区域' }]}
-                >
-                  <Select
-                    showSearch
-                    allowClear
-                    placeholder="下拉单选，可模糊匹配"
-                    options={UNLOAD_AREAS.map((t) => ({ value: t, label: t }))}
-                  />
+                <Form.Item label="卸煤区域" name="unloadArea" rules={[{ required: true, message: '请选择卸煤区域' }]}>
+                  <Select showSearch allowClear options={UNLOAD_AREAS.map((t) => ({ value: t, label: t }))} />
                 </Form.Item>
                 {site.ENABLE_ENTER_CARD ? (
-                  <Form.Item
-                    label="入厂卡"
-                    name="entryCard"
-                    rules={[{ required: true, message: '请填写入厂卡号' }]}
-                    extra="卡号优先级：临时卡 ＞ 固定卡 ＞ 无卡号。后端推送临时卡时自动回填。"
-                  >
-                    <Input placeholder="YCOneTimeCardContent / 固定卡" />
+                  <Form.Item label="入厂卡" name="entryCard" rules={[{ required: true, message: '请填写入厂卡' }]}>
+                    <Input placeholder="临时卡优先于固定卡" />
                   </Form.Item>
-                ) : null}
+                ) : (
+                  <Form.Item label=" ">
+                    <span style={{ color: 'rgba(0,0,0,.25)' }}>本入厂点未启用入厂卡</span>
+                  </Form.Item>
+                )}
               </div>
             </div>
           </Form>
 
-          {log ? <pre className="mer-log">{log}</pre> : null}
-
           <div className="mer-footer-actions">
-            <Button
-              type="primary"
-              onClick={() => submit(false)}
-            >
-              确认登记
-            </Button>
-            {site.ENABLE_ENTER_SAMPLE_CARD ? (
-              <Button type="primary" onClick={() => submit(true)}>
-                确认登记并发煤样卡
+            <Space>
+              <Button type="primary" onClick={submit}>
+                确认登记
               </Button>
-            ) : null}
-            <Button
-              icon={<ClearOutlined />}
-              onClick={() => {
-                form.resetFields();
-                form.setFieldValue('sampleMethod', '机械采样');
-                setLog('');
-              }}
-            >
-              清空
-            </Button>
+              <Button
+                icon={<ClearOutlined />}
+                onClick={() => {
+                  form.resetFields();
+                  form.setFieldValue('sampleMethod', '机械采样');
+                }}
+              >
+                清空
+              </Button>
+            </Space>
           </div>
         </section>
 
-        <section className="mer-card">
+        <section className="mer-card mer-list-card">
           <div className="mer-card-hd">
             <h2>入厂登记记录</h2>
+            <span className="mer-list-count">共 {filteredRecords.length} 条</span>
           </div>
-          <Table
-            rowKey="id"
-            size="small"
-            columns={columns}
-            dataSource={filteredRecords}
-            pagination={{ pageSize: 8, showTotal: (n) => `共 ${n} 条` }}
-            scroll={{ x: 1480 }}
-          />
+          <div className="mer-list-body" ref={listBodyRef}>
+            <Table
+              rowKey="id"
+              size="small"
+              columns={columns}
+              dataSource={filteredRecords}
+              pagination={false}
+              scroll={{ x: 1280, y: tableY }}
+            />
+          </div>
         </section>
 
         <PlanSelectModal open={planOpen} onClose={() => setPlanOpen(false)} onPick={handlePlanPick} />
@@ -689,29 +573,6 @@ const ManualEntryRegistration: React.FC = () => {
           samples={scanSamples}
           onClose={() => setScan((s) => ({ ...s, open: false }))}
           onSubmit={handleScan}
-        />
-        <SampleCardWriteModal
-          open={write.open}
-          plate={write.plate}
-          serialNo={write.serialNo}
-          kind={write.kind}
-          onClose={() => setWrite((w) => ({ ...w, open: false }))}
-          onWritten={(c) => {
-            setCardLogs((list) => [c, ...list]);
-            setRecords((list) =>
-              list.map((r) => (r.serialNo === c.serialNo ? { ...r, status: 'card-issued' } : r)),
-            );
-          }}
-        />
-        <SampleCardQueryDrawer open={queryOpen} logs={cardLogs} onClose={() => setQueryOpen(false)} />
-        <ReissuePickModal
-          open={reissueOpen}
-          records={filteredRecords}
-          onClose={() => setReissueOpen(false)}
-          onPick={(row) => {
-            setReissueOpen(false);
-            setWrite({ open: true, plate: row.plate, serialNo: row.serialNo, kind: 'reissue' });
-          }}
         />
         <Drawer title="登记详情" open={!!view} onClose={() => setView(null)} width={420}>
           {view ? (

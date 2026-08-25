@@ -114,7 +114,7 @@ const InboundDrawer: React.FC<Props> = ({
             +{fmt(item.mass)}
           </span>
         ) : (
-          <span style={{ color: '#b3aca3' }}>—</span>
+          <span style={{ color: 'rgba(0,0,0,0.25)' }}>—</span>
         );
       },
     },
@@ -130,7 +130,7 @@ const InboundDrawer: React.FC<Props> = ({
             +{fmt(item.volume)}
           </span>
         ) : (
-          <span style={{ color: '#b3aca3' }}>—</span>
+          <span style={{ color: 'rgba(0,0,0,0.25)' }}>—</span>
         );
       },
     },
@@ -140,11 +140,11 @@ const InboundDrawer: React.FC<Props> = ({
       width: 170,
       render: (_, z) => {
         const item = planMap.get(z.id);
-        if (!item) return <span style={{ color: '#b3aca3' }}>—</span>;
+        if (!item) return <span style={{ color: 'rgba(0,0,0,0.25)' }}>—</span>;
         return (
           <span className="cssm-num">
             {item.pitchFrom.toFixed(1)}° → {item.pitchTo.toFixed(1)}°
-            <span style={{ marginLeft: 8, color: '#8b847b', fontSize: 11.5 }}>
+            <span style={{ marginLeft: 8, color: 'rgba(0,0,0,0.45)', fontSize: 11.5 }}>
               堆高 {item.heightFrom.toFixed(2)} → {item.heightTo.toFixed(2)} m
             </span>
           </span>

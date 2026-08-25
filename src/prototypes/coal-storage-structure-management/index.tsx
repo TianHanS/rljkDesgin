@@ -313,7 +313,7 @@ const ComponentInner: React.FC = () => {
         content: (
           <div style={{ fontSize: 13, lineHeight: 1.75 }}>
             此煤场体积通过盘煤仪获得，若手动增加，将影响实际存煤体积信息。
-            <div style={{ marginTop: 8, color: '#8b847b' }}>
+            <div style={{ marginTop: 8, color: 'rgba(0,0,0,0.45)' }}>
               涉及 {params.plan.length} 个已有盘煤体积的分区，合计入库{' '}
               {fmt(params.totalMass)} t。
             </div>
@@ -466,7 +466,7 @@ const ComponentInner: React.FC = () => {
       content: (
         <div style={{ fontSize: 13, lineHeight: 1.75 }}>
           直接删除将不会形成出入库记录，确认直接删除煤堆信息？
-          <div style={{ marginTop: 8, color: '#8b847b' }}>
+          <div style={{ marginTop: 8, color: 'rgba(0,0,0,0.45)' }}>
             {selectedZone.name} · 第 {selectedLayer.seq} 层（表层）· {fmt(selectedLayer.volume)} m³
             / {fmt(selectedLayer.mass)} t
           </div>
@@ -894,7 +894,7 @@ const ComponentInner: React.FC = () => {
         <section className="cssm-panel">
           <div className="cssm-panel-hd">
             <h2>存煤结构维护 · {yard.name}</h2>
-            <Space size={8} wrap>
+            <Space size={8} wrap={false}>
               <Button type="primary" icon={<ImportOutlined />} onClick={() => setInboundOpen(true)}>
                 入库
               </Button>

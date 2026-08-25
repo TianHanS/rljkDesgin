@@ -1,7 +1,7 @@
 /**
  * 煤场存煤结构管理 · 领域数据与配色体系
  *
- * 煤场形态：#1 / #2 圆形封闭煤场各 36 个分区（每区 10°），厂外中转煤场为条形 3 分区，堆煤高度上限 20 m。
+ * 示例存煤按作业带铺层：同一入厂批次在连续分区上取相同层厚，色带左右连贯。
  *
  * 配色规则（化解「同批次同色」与「同煤质同色」两条要求的冲突）：
  *   色族 = 库存煤种（煤质类别），色阶 = 入厂登记编号（批次）
@@ -338,77 +338,42 @@ export const nextRecordId = (prefix: string) => {
   return `${prefix}${recordSeq}`;
 };
 
-/** 确定性伪随机，保证每次加载的煤场结构一致 */
-const mulberry32 = (seed: number) => {
-  let a = seed;
-  return () => {
-    a = (a + 0x6d2b79f5) | 0;
-    let t = Math.imul(a ^ (a >>> 15), 1 | a);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-};
-
-interface YardFillPlan {
-  seed: number;
-  /** 各分区充满度（相对几何容量），0 表示空区 */
-  fill: number[];
-  /**
-   * 指定生成未识别煤层的位置：分区序号 → 该分区内未识别的层数（自顶层向下）。
-   * 指定层数超过该分区实际层数时按实际层数收敛。
-   */
-  unmarked: Record<number, number>;
+/**
+ * 堆煤作业带：同一入厂批次在连续分区上铺同一层厚。
+ * 相邻分区的同批煤层高度近似、色带连贯，符合回转 / 走行连续作业。
+ */
+interface StackCampaign {
+  /** 入厂登记编号，空字符串表示待标记 */
+  regNo: string;
+  from: number;
+  to: number;
+  /** 该作业带在各分区上的层厚 m，同批取同一值 */
+  thickness: number;
 }
 
-/** 圆形煤场按扇区连续作业，充满度沿周向呈段状分布 */
-const buildFill = (segments: [count: number, value: number][]) => {
-  const out: number[] = [];
-  segments.forEach(([count, value]) => {
-    for (let i = 0; i < count; i += 1) out.push(value);
-  });
-  return out;
-};
-
-const YARD_FILL_PLANS: Record<string, YardFillPlan> = {
-  Y1: {
-    seed: 20260824,
-    fill: buildFill([
-      [4, 0.9],
-      [4, 0.82],
-      [3, 0.68],
-      [3, 0.55],
-      [4, 0.44],
-      [3, 0.3],
-      [3, 0.18],
-      [2, 0],
-      [4, 0.62],
-      [3, 0.76],
-      [3, 0.86],
-    ]),
-    // 5 区连续两个盘煤周期未匹配到入厂批次，7 区与 22 区各有一层待标记
-    unmarked: { 5: 2, 7: 1, 22: 1 },
-  },
-  Y2: {
-    seed: 20260817,
-    fill: buildFill([
-      [3, 0.52],
-      [5, 0.7],
-      [4, 0.86],
-      [3, 0.62],
-      [3, 0.4],
-      [4, 0.24],
-      [3, 0],
-      [4, 0.48],
-      [4, 0.66],
-      [3, 0.58],
-    ]),
-    unmarked: { 12: 1 },
-  },
-  Y3: {
-    seed: 20260801,
-    fill: [0.46, 0.34, 0],
-    unmarked: { 2: 1 },
-  },
+const YARD_CAMPAIGNS: Record<string, StackCampaign[]> = {
+  Y1: [
+    { regNo: 'gxsz-2026-054RCDJ2026061201', from: 1, to: 16, thickness: 5.4 },
+    { regNo: 'gxsz-2026-054RCDJ2026062801', from: 8, to: 22, thickness: 3.6 },
+    { regNo: 'gxsz-2026-054RCDJ2026070902', from: 17, to: 30, thickness: 4.2 },
+    { regNo: 'gxsz-2026-054RCDJ2026072401', from: 24, to: 34, thickness: 3.0 },
+    { regNo: 'gxsz-2026-042RCDJ2026080501', from: 28, to: 36, thickness: 3.6 },
+    { regNo: 'gxsz-2026-054RCDJ2026081802', from: 1, to: 10, thickness: 3.2 },
+    { regNo: '', from: 5, to: 7, thickness: 1.6 },
+    { regNo: '', from: 22, to: 22, thickness: 1.6 },
+  ],
+  Y2: [
+    { regNo: 'gxsz-2026-054RCDJ2026070501', from: 1, to: 18, thickness: 5.0 },
+    { regNo: 'gxsz-2026-054RCDJ2026072202', from: 12, to: 26, thickness: 3.8 },
+    { regNo: 'gxsz-2026-054RCDJ2026080901', from: 22, to: 34, thickness: 4.0 },
+    { regNo: 'gxsz-2026-054RCDJ2026082001', from: 30, to: 36, thickness: 2.6 },
+    { regNo: '', from: 12, to: 12, thickness: 1.4 },
+  ],
+  Y3: [
+    { regNo: 'gxsz-2026-042RCDJ2026071801', from: 1, to: 2, thickness: 6.5 },
+    { regNo: 'gxsz-2026-042RCDJ2026080301', from: 1, to: 2, thickness: 4.0 },
+    { regNo: '', from: 2, to: 2, thickness: 2.0 },
+  ],
 };
 
 const makeLayerFrom = (
@@ -451,41 +416,32 @@ const makeLayerFrom = (
 export const createZones = (): CoalZone[] => {
   const zones: CoalZone[] = [];
   YARDS.forEach((yard) => {
-    const plan = YARD_FILL_PLANS[yard.id];
     const geometry = yardGeometry(yard);
-    const capacity = geo.capacityVolume(geometry);
-    const rnd = mulberry32(plan.seed);
-    const batches = ARRIVAL_BATCHES.filter((b) => b.yardId === yard.id).sort((a, b) =>
-      a.unloadedAt.localeCompare(b.unloadedAt),
-    );
+    const campaigns = YARD_CAMPAIGNS[yard.id] ?? [];
 
     for (let code = 1; code <= yard.zoneCount; code += 1) {
-      const fill = plan.fill[code - 1] ?? 0;
-      const totalVolume = fill * capacity;
       const layers: CoalLayer[] = [];
+      let height = 0;
 
-      if (totalVolume > 1) {
-        const layerCount = fill > 0.7 ? 3 + (rnd() > 0.5 ? 1 : 0) : fill > 0.35 ? 2 : 1;
-        // 底层更厚，符合先堆的煤层被后续煤层压覆的实际形态
-        const weights = Array.from({ length: layerCount }, (_, i) => 1.6 - i * 0.28 + rnd() * 0.3);
-        const weightSum = weights.reduce((s, w) => s + w, 0);
-        const unmarkedCount = Math.min(layerCount, plan.unmarked[code] ?? 0);
-
-        for (let i = 0; i < layerCount; i += 1) {
-          const volume = (totalVolume * weights[i]) / weightSum;
-          // 自顶层向下指定的层标记为未识别
-          const isUnmarked = i >= layerCount - unmarkedCount;
-          const batch = batches[(code + i) % batches.length];
-          layers.push(
-            makeLayerFrom(
-              isUnmarked ? '' : batch.regNo,
-              volume,
-              yard.density,
-              isUnmarked ? SURVEY_PERIOD.to : batch.unloadedAt,
-            ),
-          );
-        }
-      }
+      campaigns.forEach((campaign) => {
+        if (code < campaign.from || code > campaign.to) return;
+        const heightBottom = height;
+        const heightTop = Math.min(geometry.maxStackHeight, height + campaign.thickness);
+        const thickness = heightTop - heightBottom;
+        if (thickness < 0.05) return;
+        const volume =
+          geo.stackVolume(geometry, heightTop) - geo.stackVolume(geometry, heightBottom);
+        const batch = campaign.regNo ? findBatch(campaign.regNo) : undefined;
+        layers.push(
+          makeLayerFrom(
+            campaign.regNo,
+            volume,
+            yard.density,
+            campaign.regNo ? (batch?.unloadedAt ?? SURVEY_PERIOD.to) : SURVEY_PERIOD.to,
+          ),
+        );
+        height = heightTop;
+      });
 
       const total = layers.reduce((s, l) => s + l.volume, 0);
       zones.push({
@@ -652,7 +608,7 @@ export const readableText = (hex: string) => {
   const rgb = [0, 2, 4].map((i) => parseInt(v.slice(i, i + 2), 16) / 255);
   const lin = rgb.map((c) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4));
   const lum = 0.2126 * lin[0] + 0.7152 * lin[1] + 0.0722 * lin[2];
-  return lum > 0.42 ? '#1b1815' : '#ffffff';
+  return lum > 0.42 ? 'rgba(0, 0, 0, 0.88)' : '#ffffff';
 };
 
 export const coalTypeName = (key: string) => COAL_TYPES[key]?.name ?? '待标记';

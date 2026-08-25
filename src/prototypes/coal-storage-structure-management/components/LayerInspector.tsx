@@ -222,7 +222,7 @@ const LayerInspector: React.FC<Props> = ({
             </div>
           </>
         ) : (
-          <div style={{ gridColumn: '1 / -1', fontSize: 12, color: '#8b847b' }}>
+          <div style={{ gridColumn: '1 / -1', fontSize: 12, color: 'rgba(0,0,0,0.45)' }}>
             标记入厂批次后自动带入该批次化验煤质
           </div>
         )}

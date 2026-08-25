@@ -182,3 +182,15 @@ src/prototypes/manual-entry-registration/
     ├── ScanModal.tsx
     └── SampleCardModal.tsx
 ```
+
+## ✅ 验收记录
+
+- 本原型目录 `npx tsc --noEmit`：**0 error**。
+- `ENTRY_KEY=prototypes/manual-entry-registration npx vite build`：**构建通过**。
+- 浏览器（浅色后台）：
+  - 页头入厂点 + 来煤/转场分段；三列表单与底部登记列表。
+  - 蒙A90005 查询为禁止入厂，更新为允许后可填入表单；湘C92223 未允许时确认登记被阻断。
+  - 选择计划回填；有效云驿码回填车牌，过期码提示「二维码失效，请刷新！」。
+  - 桂A8T216 登记成功后列表新增、模块日志含道闸/LED/广播。
+  - 切换北门后隐藏选择计划、煤样卡与入厂卡，显示获取预入厂信息。
+  - 控制台无运行时报错。

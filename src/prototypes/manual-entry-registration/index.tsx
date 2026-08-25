@@ -351,6 +351,12 @@ const ManualEntryRegistration: React.FC = () => {
   const columns: ColumnsType<EntryRecord> = [
     { title: '序号', width: 64, render: (_, __, i) => i + 1 },
     { title: '流水号', dataIndex: 'serialNo', width: 160 },
+    {
+      title: '类型',
+      dataIndex: 'mode',
+      width: 90,
+      render: (m: RegisterMode) => (m === 'transfer' ? <Tag>转场煤</Tag> : <Tag color="blue">来煤</Tag>),
+    },
     { title: '车牌号', dataIndex: 'plate', width: 110 },
     { title: '供应商', dataIndex: 'supplier', width: 150, ellipsis: true },
     { title: '矿点', dataIndex: 'mine', width: 110 },

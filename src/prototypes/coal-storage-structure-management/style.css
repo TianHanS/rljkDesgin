@@ -275,20 +275,18 @@
 /* ============================ 实际堆煤视图 ============================ */
 
 .cssm-stack-view {
-  display: flex;
-  align-items: flex-start;
-  gap: 14px;
   padding: 14px;
 }
 
 .cssm-heatmap-wrap {
-  flex: 1 1 auto;
   min-width: 0;
   overflow-x: auto;
 }
 
 .cssm-heatmap-wrap svg {
   display: block;
+  width: 100%;
+  height: auto;
 }
 
 .cssm-hm-layer {
@@ -301,37 +299,6 @@
 
 .cssm-hm-layer:focus-visible {
   outline: 2px solid var(--rule-focus);
-}
-
-.cssm-locator {
-  flex: 0 0 auto;
-  width: 196px;
-  padding: 4px 4px 0;
-}
-
-.cssm-locator svg {
-  display: block;
-  margin: 0 auto;
-}
-
-.cssm-locator-sector {
-  cursor: pointer;
-  transition: opacity 0.16s ease;
-}
-
-.cssm-locator-sector:hover {
-  opacity: 0.72;
-}
-
-.cssm-locator-sector:focus-visible {
-  outline: 2px solid var(--rule-focus);
-}
-
-.cssm-locator-note {
-  margin-top: 8px;
-  font-size: 10.5px;
-  line-height: 1.6;
-  color: var(--coal-ink-ghost);
 }
 
 /* ============================ 分层视图（热力格图） ============================ */
@@ -758,14 +725,6 @@
 
   .cssm-board-cell.is-pair {
     grid-column: 1 / -1;
-  }
-
-  .cssm-stack-view {
-    flex-direction: column-reverse;
-  }
-
-  .cssm-locator {
-    width: 100%;
   }
 
   .cssm-drawer-form {

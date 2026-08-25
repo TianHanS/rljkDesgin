@@ -1,29 +1,41 @@
 /**
- * 圆形煤场扇形楔煤堆几何模型
+ * 煤场分区煤堆几何模型
  *
- * 圆形封闭煤场由中心堆料塔上的悬臂绕中心回转堆煤，煤场沿周向均分为 36 个分区，
- * 每个分区张角 10°。分区内煤堆为一个扇形楔：径向断面是等腰梯形（底宽 = 外半径 − 内半径，
- * 边坡由燃煤安息角决定），沿周向张开 Δα。按 Pappus 定理，扇形楔体积为
+ * 圆形煤场：中心堆料塔悬臂绕中心回转堆煤。径向断面是等腰梯形（底宽 = 外半径 − 内半径，
+ * 边坡由燃煤安息角决定），沿周向张开 Δα，按 Pappus 定理：
  *
  *   V(h) = Δα · r̄ · A(h)
- *   A(h) = h · (W − h/tanθ)        径向断面积，顶宽 = W − 2h/tanθ
- *   r̄   = Ri + W/2                 断面形心半径
+ *
+ * 条形煤场：斗轮堆取料机沿轨道走行堆煤。同一径向断面沿分区长度 L 拉伸为直棱柱：
+ *
+ *   V(h) = L · A(h)
+ *
+ * 两种形态共用径向断面积：
+ *
+ *   A(h) = h · (W − h/tanθ)        顶宽 = W − 2h/tanθ
  *
  * 煤层分界面由堆料时悬臂俯仰角决定，故堆高与俯仰角互为反函数：
  *   h = pivotHeight + armReach · tan(φ)
  *
  * 参考资料：
  * - /rules/design-guide.md
- * - 用户提供的存煤结构管理业务描述（圆形煤场 36 分区、20 m 堆高上限、10 cm 分带热力图）
+ * - 用户提供的存煤结构管理业务描述（圆形/条形煤场、2～3 分区、20 m 堆高上限）
  */
 
+export type YardShape = 'circular' | 'strip';
+
 export interface ZoneGeometry {
-  /** 分区张角 °（36 分区即 10°） */
+  shape: YardShape;
+  /** 圆形分区张角 °；条形为 0 */
   sectorAngle: number;
-  /** 煤场内半径（中心堆料塔基础）m */
+  /** 圆形内半径（中心堆料塔基础）m；条形为 0 */
   innerRadius: number;
-  /** 煤场外半径（挡煤墙）m */
+  /** 圆形外半径（挡煤墙）m；条形为 0 */
   outerRadius: number;
+  /** 条形分区沿轨道方向的长度 m；圆形为 0 */
+  zoneLength: number;
+  /** 条形煤堆底宽 m；圆形等于 outerRadius − innerRadius */
+  pileWidth: number;
   /** 燃煤自然安息角 ° */
   reposeAngle: number;
   /** 挡煤墙高度 m */
@@ -35,6 +47,36 @@ export interface ZoneGeometry {
   /** 悬臂水平投影长度 m */
   armReach: number;
 }
+
+/** 圆形封闭煤场：Φ130 m，按分区数均分周向张角 */
+export const circularZoneGeometry = (zoneCount: number): ZoneGeometry => ({
+  shape: 'circular',
+  sectorAngle: 360 / zoneCount,
+  innerRadius: 8,
+  outerRadius: 65,
+  zoneLength: 0,
+  pileWidth: 57,
+  reposeAngle: 38,
+  wallHeight: 22,
+  maxStackHeight: 20,
+  pivotHeight: 12,
+  armReach: 40,
+});
+
+/** 条形煤场：全场长 240 m，底宽 50 m，按分区数均分长度 */
+export const stripZoneGeometry = (zoneCount: number): ZoneGeometry => ({
+  shape: 'strip',
+  sectorAngle: 0,
+  innerRadius: 0,
+  outerRadius: 0,
+  zoneLength: 240 / zoneCount,
+  pileWidth: 50,
+  reposeAngle: 38,
+  wallHeight: 18,
+  maxStackHeight: 20,
+  pivotHeight: 10,
+  armReach: 35,
+});
 
 /** 实际堆煤视图的分带高度 m（20 m 上限划分为 200 个 10 cm 方块） */
 export const BAND_HEIGHT = 0.1;
@@ -48,9 +90,10 @@ const toDeg = (rad: number) => (rad * 180) / Math.PI;
 export const slopeFactor = (g: ZoneGeometry) => Math.tan(toRad(g.reposeAngle));
 
 /** 径向堆底宽度 m */
-export const baseWidth = (g: ZoneGeometry) => g.outerRadius - g.innerRadius;
+export const baseWidth = (g: ZoneGeometry) =>
+  g.shape === 'strip' ? g.pileWidth : g.outerRadius - g.innerRadius;
 
-/** 径向断面形心半径 m */
+/** 径向断面形心半径 m（仅圆形煤场使用） */
 export const centroidRadius = (g: ZoneGeometry) => g.innerRadius + baseWidth(g) / 2;
 
 /** 堆高 h 处的径向顶宽 m，堆成三角形后归零 */
@@ -71,7 +114,9 @@ export const sectionArea = (g: ZoneGeometry, h: number) => {
 /** 堆高 h 对应的分区煤堆体积 m³ */
 export const stackVolume = (g: ZoneGeometry, h: number) => {
   if (h <= 0) return 0;
-  return toRad(g.sectorAngle) * centroidRadius(g) * sectionArea(g, h);
+  const area = sectionArea(g, h);
+  if (g.shape === 'strip') return g.zoneLength * area;
+  return toRad(g.sectorAngle) * centroidRadius(g) * area;
 };
 
 /** 分区几何容量（堆至允许最大堆高）m³ */

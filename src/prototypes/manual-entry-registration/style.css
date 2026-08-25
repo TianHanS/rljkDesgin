@@ -1,0 +1,159 @@
+@import "tailwindcss";
+
+.mer-root {
+  min-width: 1100px;
+  min-height: 100vh;
+  padding: 16px 20px 28px;
+  background: #f5f5f5;
+  color: rgba(0, 0, 0, 0.88);
+  font-family: "PingFang SC", "Microsoft YaHei", "Segoe UI", system-ui, sans-serif;
+}
+
+.mer-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.mer-head h1 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 650;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.mer-head h1::before {
+  content: "";
+  width: 4px;
+  height: 16px;
+  border-radius: 2px;
+  background: #1677ff;
+}
+
+.mer-head p {
+  margin: 6px 0 0 14px;
+  font-size: 12.5px;
+  color: rgba(0, 0, 0, 0.45);
+  max-width: 720px;
+  line-height: 1.6;
+}
+
+.mer-head-tools {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: nowrap;
+}
+
+.mer-cfg {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 2px;
+}
+
+.mer-card {
+  background: #fff;
+  border: 1px solid #f0f0f0;
+  border-radius: 8px;
+  margin-bottom: 12px;
+}
+
+.mer-card-hd {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 16px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.mer-card-hd h2 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 650;
+}
+
+.mer-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.mer-card-bd {
+  padding: 16px 16px 8px;
+}
+
+.mer-form-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0 24px;
+}
+
+.mer-col-title {
+  margin: 0 0 10px;
+  font-size: 12px;
+  font-weight: 650;
+  color: rgba(0, 0, 0, 0.45);
+  letter-spacing: 0.04em;
+}
+
+.mer-footer-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 4px 16px 16px;
+}
+
+.mer-log {
+  margin: 0 16px 16px;
+  font-size: 12px;
+  line-height: 1.7;
+  color: rgba(0, 0, 0, 0.65);
+  background: #fafafa;
+  border: 1px solid #f0f0f0;
+  border-radius: 6px;
+  padding: 8px 12px;
+  white-space: pre-wrap;
+}
+
+.mer-scan-hint {
+  margin-bottom: 12px;
+  font-size: 12.5px;
+  color: rgba(0, 0, 0, 0.45);
+  line-height: 1.6;
+}
+
+.mer-permit {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+@media (max-width: 1200px) {
+  .mer-form-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .mer-root {
+    min-width: 0;
+  }
+  .mer-form-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mer-root * {
+    transition: none !important;
+    animation: none !important;
+  }
+}

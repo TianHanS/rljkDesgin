@@ -1,38 +1,27 @@
 /**
- * 通道设备状态
+ * 车号识别器 / LED：绿点在线、灰点离线
  */
 import React from 'react';
-import { Tag } from 'antd';
-import {
-  HEALTH_LABEL,
-  KIND_LABEL,
-  type ChannelDevice,
-  type DeviceHealth,
-} from '../data';
+import type { ChannelDevice } from '../data';
 
 interface Props {
   devices: ChannelDevice[];
 }
-
-const colorOf = (h: DeviceHealth) => {
-  if (h === 'online') return 'success';
-  if (h === 'alarm') return 'warning';
-  return 'default';
-};
 
 const DevicePanel: React.FC<Props> = ({ devices }) => (
   <section className="oqd-card oqd-device-card">
     <div className="oqd-card-hd">
       <h2>设备状态监测</h2>
     </div>
-    <ul className="oqd-device-list">
+    <ul className="oqd-device-dots">
       {devices.map((d) => (
         <li key={d.id}>
-          <div>
-            <strong>{d.name}</strong>
-            <span>{KIND_LABEL[d.kind]} · {d.remark}</span>
-          </div>
-          <Tag color={colorOf(d.health)}>{HEALTH_LABEL[d.health]}</Tag>
+          <i
+            className={d.health === 'online' ? 'oqd-dot oqd-dot-on' : 'oqd-dot oqd-dot-off'}
+            aria-label={d.health === 'online' ? '在线' : '离线'}
+            title={d.health === 'online' ? '在线' : '离线'}
+          />
+          <span>{d.name}</span>
         </li>
       ))}
     </ul>

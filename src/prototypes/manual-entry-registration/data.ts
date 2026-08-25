@@ -1,5 +1,5 @@
 /**
- * 人工入厂登记 · 站点配置、来煤计划、预入厂车辆与现场字典
+ * 燃煤入厂登记 · 站点配置、来煤计划、预入厂车辆与现场字典
  *
  * 参考资料：
  * - 用户提供的人工入厂登记截图与功能需求
@@ -9,9 +9,8 @@
 export type PlanGetMode = 1 | 2 | 3 | 4;
 export type OriginalGetMode = 1 | 2 | 3 | 4;
 export type SampleEditMode = 0 | 1;
-export type RegisterMode = 'incoming' | 'transfer';
 export type EntryPermit = 'forbidden' | 'allowed';
-export type RecordStatus = 'registered' | 'card-issued';
+export type RecordStatus = 'registered';
 
 export interface SiteConfig {
   id: string;
@@ -20,7 +19,6 @@ export interface SiteConfig {
   GET_ORIGINAL_MSG: OriginalGetMode;
   SAMPLE_MEASURE_EDIT: SampleEditMode;
   ENABLE_ENTER_CARD: boolean;
-  ENABLE_ENTER_SAMPLE_CARD: boolean;
 }
 
 export interface CoalPlan {
@@ -64,7 +62,6 @@ export interface EntryRecord {
   enterAt: string;
   status: RecordStatus;
   entryCard: string;
-  mode: RegisterMode;
   siteId: string;
 }
 
@@ -76,7 +73,6 @@ export const SITES: SiteConfig[] = [
     GET_ORIGINAL_MSG: 3,
     SAMPLE_MEASURE_EDIT: 1,
     ENABLE_ENTER_CARD: true,
-    ENABLE_ENTER_SAMPLE_CARD: true,
   },
   {
     id: 'north',
@@ -85,7 +81,6 @@ export const SITES: SiteConfig[] = [
     GET_ORIGINAL_MSG: 1,
     SAMPLE_MEASURE_EDIT: 0,
     ENABLE_ENTER_CARD: false,
-    ENABLE_ENTER_SAMPLE_CARD: false,
   },
   {
     id: 'east',
@@ -94,7 +89,6 @@ export const SITES: SiteConfig[] = [
     GET_ORIGINAL_MSG: 2,
     SAMPLE_MEASURE_EDIT: 1,
     ENABLE_ENTER_CARD: true,
-    ENABLE_ENTER_SAMPLE_CARD: false,
   },
   {
     id: 'west',
@@ -103,7 +97,6 @@ export const SITES: SiteConfig[] = [
     GET_ORIGINAL_MSG: 4,
     SAMPLE_MEASURE_EDIT: 1,
     ENABLE_ENTER_CARD: true,
-    ENABLE_ENTER_SAMPLE_CARD: true,
   },
 ];
 
@@ -238,9 +231,8 @@ export const INITIAL_RECORDS: EntryRecord[] = [
     weighPos: '2#汽车衡',
     samplePos: '1#机械采样机',
     enterAt: '2026-08-25 08:46:22',
-    status: 'card-issued',
+    status: 'registered',
     entryCard: 'YC-FIX-1107',
-    mode: 'incoming',
     siteId: 'south',
   },
   {
@@ -257,7 +249,6 @@ export const INITIAL_RECORDS: EntryRecord[] = [
     enterAt: '2026-08-25 07:21:09',
     status: 'registered',
     entryCard: 'YC-FIX-1094',
-    mode: 'incoming',
     siteId: 'south',
   },
 ];

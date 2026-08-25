@@ -202,7 +202,14 @@ const OutdoorQueueDispatch: React.FC = () => {
     <ConfigProvider locale={zhCN} componentSize="small">
       <div className="oqd-root">
         <header className="oqd-head">
-          <h1>厂外调度</h1>
+          <h1>
+            厂外调度
+            <span className="oqd-points">
+              {channel.entryPoints.map((p) => (
+                <Tag key={p.id}>{p.name}</Tag>
+              ))}
+            </span>
+          </h1>
           <div className="oqd-head-tools">
             {yunyiOn ? (
               <Tag color="blue">云驿接管</Tag>
@@ -218,11 +225,6 @@ const OutdoorQueueDispatch: React.FC = () => {
               options={CHANNELS.map((c) => ({ value: c.id, label: c.name }))}
               onChange={(id) => setChannelId(id)}
             />
-            <span className="oqd-points">
-              {channel.entryPoints.map((p) => (
-                <Tag key={p.id}>{p.name}</Tag>
-              ))}
-            </span>
             <label className="oqd-switch">
               厂外自动排队
               <Switch checked={plantOn} onChange={handlePlant} />

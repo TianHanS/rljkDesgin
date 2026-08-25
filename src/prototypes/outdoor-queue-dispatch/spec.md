@@ -104,7 +104,7 @@
 ## 🧭 布局与结构
 
 - **布局模式**：一屏固定（`height: 100%` + `overflow: hidden`）。页头工具条 + 上区监控/设备/日志 + 下区队列（占满剩余高度）。
-- **页头**：标题「厂外调度」、通道下拉、关联入厂点 Tag、厂外排队 Switch、云驿排队 Switch。
+- **页头**：标题「厂外调度」旁展示当前通道关联入厂点 Tag；右侧为自动取号/云驿接管状态、通道下拉、厂外排队 Switch、云驿排队 Switch。
 - **上区**：左约 58% 车号识别监控；右为设备状态（上）与识别日志（下）。
 - **下区**：队列工具条（增补、车牌筛选）+ 表格；`scroll.y` 跟随剩余高度，页面本身不纵向滚动。
 - **关键尺寸**：灰底 `#f5f5f5`，白卡片 1 px `#f0f0f0` 描边、圆角 8 px；`min-width: 1280px`；`componentSize="small"`。
@@ -158,6 +158,13 @@ src/prototypes/outdoor-queue-dispatch/
 
 ## ✅ 验收记录
 
-- 本原型目录 TypeScript：**待验收**。
-- `ENTRY_KEY=prototypes/outdoor-queue-dispatch npx vite build`：**待验收**。
-- 浏览器：**待验收**。
+- 本原型目录 TypeScript：**无本目录错误**（全仓 `tsc` 仍有其他原型既有问题，不在本次范围）。
+- `ENTRY_KEY=prototypes/outdoor-queue-dispatch npx vite build`：**构建通过**。
+- 浏览器 `http://localhost:51720/prototypes/outdoor-queue-dispatch/`，桌面约 1440×900：
+  - 标题「厂外调度」；监控、设备、日志与队列同屏可见；`scrollHeight === clientHeight`，`overflow-y: hidden`，页面不纵向滚动。
+  - 南通道默认厂外排队开、云驿关；关联南门/西门入厂点。
+  - 打开云驿排队时厂外排队连锁关闭，提示「已停用厂外自动排队，云驿排队已启用」；反向同样连锁。
+  - 冻结鲁B12876 后禁止入厂并移至队尾；解冻湘C92223 后允许入厂并排到非冻结队尾；优先蒙A90005 后序号为 1；插队、增补京H12345、移除均成功。
+  - 北通道 LED 告警、东通道道闸离线。
+  - 抓拍缩略图可预览放大。
+  - 控制台无运行时报错。

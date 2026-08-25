@@ -302,11 +302,14 @@ const ManualEntryRegistration: React.FC = () => {
         siteId: site.id,
       };
       setRecords((list) => [row, ...list]);
+      form.resetFields();
+      form.setFieldValue('sampleMethod', '机械采样');
       message.success(
         `登记成功。道闸已抬杆，LED「${plate} 登记成功」，广播「${plate} 请入厂，前往${values.samplePos || '采样位'} ${values.weighPos || '过衡位'}」`,
       );
-    } catch {
-      /* antd 已展示校验 */
+    } catch (err) {
+      const first = (err as { errorFields?: { errors: string[] }[] }).errorFields?.[0]?.errors?.[0];
+      message.error(first || '请完善必填项后再登记');
     }
   };
 

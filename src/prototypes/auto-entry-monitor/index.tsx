@@ -86,7 +86,10 @@ const AutoEntryMonitor: React.FC = () => {
 
   const channelGates = gates.filter((gate) => gate.channelId === channelId);
   const channelLogs = logs.filter((item) => channelGates.some((gate) => gate.id === item.gateId));
-  const channelRecords = records.filter((item) => channelGates.some((gate) => gate.id === item.gateId));
+  const channelRecords = records
+    .filter((item) => channelGates.some((gate) => gate.id === item.gateId))
+    .slice()
+    .sort((a, b) => (a.enterAt < b.enterAt ? 1 : -1));
   const queueList = QUEUE_VEHICLES.filter((item) => item.channelId === channelId);
   const plantQueue = QUEUE_VEHICLES.length;
 
@@ -199,27 +202,40 @@ const AutoEntryMonitor: React.FC = () => {
   }, [channelId]);
 
   const queueColumns: ColumnsType<QueueVehicle> = [
-    { title: '排队序号', dataIndex: 'seq', width: 90 },
-    { title: '车牌号', dataIndex: 'plate', width: 120 },
-    { title: '煤种/物资', dataIndex: 'cargo', width: 120 },
-    { title: '供应商', dataIndex: 'supplier' },
+    { title: '序号', dataIndex: 'seq', width: 56 },
+    { title: '车牌号', dataIndex: 'plate', width: 108 },
+    { title: '煤种/物资', dataIndex: 'cargo', width: 88 },
+    { title: '供应商', dataIndex: 'supplier', ellipsis: true },
     {
-      title: '等待时长',
+      title: '等待',
       dataIndex: 'waitMin',
-      width: 110,
+      width: 80,
       render: (value: number) => (
         <span style={{ color: value >= 30 ? '#cf1322' : undefined }}>{value} 分钟</span>
       ),
     },
     {
-      title: '排队状态',
+      title: '状态',
       dataIndex: 'status',
-      width: 120,
+      width: 96,
       render: (status: QueueVehicle['status']) => {
         const color = status === 'overtime' ? 'error' : status === 'approaching' ? 'processing' : 'default';
         return <Tag color={color}>{QUEUE_STATUS_LABEL[status]}</Tag>;
       },
     },
+  ];
+
+  const recordColumns: ColumnsType<EntryRecord> = [
+    {
+      title: '发卡点',
+      dataIndex: 'gateId',
+      width: 120,
+      render: (gateId: string) => gates.find((gate) => gate.id === gateId)?.name.replace('发卡点', '') ?? gateId,
+    },
+    { title: '车牌号', dataIndex: 'plate', width: 108 },
+    { title: '入厂时间', dataIndex: 'enterAt', width: 160 },
+    { title: '采样位', dataIndex: 'samplePos', ellipsis: true },
+    { title: '过衡位', dataIndex: 'weighPos', ellipsis: true },
   ];
 
   const pairOptions = windows.map((pair, index) => {
@@ -233,14 +249,10 @@ const AutoEntryMonitor: React.FC = () => {
     <ConfigProvider locale={zhCN}>
       <div className="aem-root">
         <header className="aem-head">
-          <div>
-            <h1>自动入厂监测</h1>
-            <p>
-              入厂调度 · 一屏对照当前通道 2 个发卡点。全厂排队 {plantQueue} 辆，切换通道后统计、视频、日志与排队列表同步更新。
-            </p>
-          </div>
+          <h1>自动入厂监测</h1>
           <div className="aem-head-tools">
             <Segmented
+              size="small"
               value={channelId}
               options={CHANNELS.map((item) => ({ label: item.name, value: item.id }))}
               onChange={(value) => {
@@ -250,71 +262,94 @@ const AutoEntryMonitor: React.FC = () => {
             />
             {pairOptions.length > 1 ? (
               <Segmented
+                size="small"
                 value={String(safePairIndex)}
                 options={pairOptions}
                 onChange={(value) => setPairIndex(Number(value))}
               />
             ) : null}
-            <div className="aem-clock">{formatClock(now)}</div>
           </div>
+          <div className="aem-stats">
+            <div className="aem-stat">
+              <div className="label">全厂排队</div>
+              <div className="value">{plantQueue}<span className="unit">辆</span></div>
+            </div>
+            <div className="aem-stat">
+              <div className="label">当前排队</div>
+              <div className="value">{stats.queue}<span className="unit">辆</span></div>
+            </div>
+            <div className="aem-stat">
+              <div className="label">今日已入厂</div>
+              <div className="value">{stats.entered}<span className="unit">辆</span></div>
+            </div>
+            <div className={`aem-stat ${stats.overtime > 0 ? 'warn' : ''}`}>
+              <div className="label">等待超 30 分</div>
+              <div className="value">{stats.overtime}<span className="unit">辆</span></div>
+            </div>
+            <div className="aem-stat">
+              <div className="label">今日抽检</div>
+              <div className="value">{stats.inspect}<span className="unit">次</span></div>
+            </div>
+            <div className={`aem-stat ${stats.exception > 0 ? 'alarm' : ''}`}>
+              <div className="label">今日异常</div>
+              <div className="value">{stats.exception}<span className="unit">条</span></div>
+            </div>
+            <div className="aem-stat">
+              <div className="label">平均等待</div>
+              <div className="value">{stats.avgWait}<span className="unit">分</span></div>
+            </div>
+          </div>
+          <div className="aem-clock">{formatClock(now)}</div>
         </header>
 
-        <section className="aem-kpis">
-          <div className="aem-kpi">
-            <div className="label">当前排队</div>
-            <div className="value">{stats.queue}<span className="unit">辆</span></div>
-          </div>
-          <div className="aem-kpi">
-            <div className="label">今日已入厂</div>
-            <div className="value">{stats.entered}<span className="unit">辆</span></div>
-          </div>
-          <div className={`aem-kpi ${stats.overtime > 0 ? 'warn' : ''}`}>
-            <div className="label">等待超 30 分钟</div>
-            <div className="value">{stats.overtime}<span className="unit">辆</span></div>
-          </div>
-          <div className="aem-kpi">
-            <div className="label">今日抽检</div>
-            <div className="value">{stats.inspect}<span className="unit">次</span></div>
-          </div>
-          <div className={`aem-kpi ${stats.exception > 0 ? 'alarm' : ''}`}>
-            <div className="label">今日异常</div>
-            <div className="value">{stats.exception}<span className="unit">条</span></div>
-          </div>
-          <div className="aem-kpi">
-            <div className="label">平均等待</div>
-            <div className="value">{stats.avgWait}<span className="unit">分钟</span></div>
-          </div>
-        </section>
-
-        <div className="aem-body">
+        <div className="aem-main">
           {visibleGates.map((gate) => (
             <GatePointCard
               key={gate.id}
               gate={gate}
               clock={formatClock(now)}
               logs={logs.filter((item) => item.gateId === gate.id)}
-              records={records.filter((item) => item.gateId === gate.id)}
               onToggleService={(next) => confirmToggle(gate, next)}
             />
           ))}
         </div>
 
-        <section className="aem-queue">
-          <div className="aem-queue-hd">
-            <h2>{channel.name}排队车辆</h2>
-            <span style={{ fontSize: 12, color: 'rgba(0,0,0,0.45)' }}>按排队序号展示，超时车辆红色标识</span>
-          </div>
-          <div className="aem-queue-bd">
-            <Table
-              size="small"
-              rowKey="id"
-              pagination={false}
-              columns={queueColumns}
-              dataSource={queueList}
-              locale={{ emptyText: '当前通道暂无排队车辆' }}
-            />
-          </div>
-        </section>
+        <div className="aem-bottom">
+          <section className="aem-panel">
+            <div className="aem-panel-hd">
+              <h2>{channel.name}排队车辆</h2>
+              <span>超时红色标识</span>
+            </div>
+            <div className="aem-panel-bd">
+              <Table
+                size="small"
+                rowKey="id"
+                pagination={false}
+                columns={queueColumns}
+                dataSource={queueList}
+                scroll={{ y: 164 }}
+                locale={{ emptyText: '当前通道暂无排队车辆' }}
+              />
+            </div>
+          </section>
+          <section className="aem-panel">
+            <div className="aem-panel-hd">
+              <h2>已入厂登记车辆</h2>
+              <span>按入厂时间逆序</span>
+            </div>
+            <div className="aem-panel-bd">
+              <Table
+                size="small"
+                rowKey="id"
+                pagination={false}
+                columns={recordColumns}
+                dataSource={channelRecords}
+                scroll={{ y: 164 }}
+                locale={{ emptyText: '暂无入厂登记车辆' }}
+              />
+            </div>
+          </section>
+        </div>
       </div>
     </ConfigProvider>
   );

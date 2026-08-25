@@ -11,11 +11,11 @@ import * as geo from '../geometry';
 import { fmt, readableText } from '../data';
 import type { ComputedLayer, ComputedZone } from '../model';
 
-const COL_W = 34;
+const COL_W = 196;
 const BAND_PX = 2.4;
-const AXIS_L = 48;
-const AXIS_R = 58;
-const AXIS_B = 28;
+const AXIS_L = 52;
+const AXIS_R = 62;
+const AXIS_B = 36;
 const PAD_T = 16;
 const PLOT_H = geo.BAND_COUNT * BAND_PX;
 
@@ -71,6 +71,7 @@ const StackHeatmap: React.FC<Props> = ({
         width={width}
         height={height}
         viewBox={`0 0 ${width} ${height}`}
+        preserveAspectRatio="xMidYMin meet"
         role="img"
         aria-label={`实际堆煤视图，${zones.length} 个分区，纵轴为 0 至 ${g.maxStackHeight} 米堆煤高度，按 10 厘米分带`}
       >
@@ -207,12 +208,12 @@ const StackHeatmap: React.FC<Props> = ({
                       strokeWidth={0.9}
                     />
 
-                    {runHeight >= 15 && label && (
+                    {runHeight >= 18 && label && (
                       <text
                         x={x + COL_W / 2}
-                        y={yTop + runHeight / 2 + 3}
+                        y={yTop + runHeight / 2 + 4}
                         textAnchor="middle"
-                        fontSize={8.5}
+                        fontSize={11}
                         fontWeight={600}
                         fill={readableText(run.layer.color)}
                       >
@@ -238,22 +239,22 @@ const StackHeatmap: React.FC<Props> = ({
               {/* 底轴：分区编号增序 */}
               <text
                 x={x + COL_W / 2}
-                y={plotBottom + 13}
+                y={plotBottom + 16}
                 textAnchor="middle"
-                fontSize={9.5}
-                fontWeight={zone.code % 5 === 0 ? 600 : 400}
-                fill={zone.code % 5 === 0 ? '#5b554e' : '#8b847b'}
+                fontSize={12}
+                fontWeight={600}
+                fill="#5b554e"
               >
-                {zone.code}
+                {zone.name}
               </text>
               <text
                 x={x + COL_W / 2}
-                y={plotBottom + 24}
+                y={plotBottom + 30}
                 textAnchor="middle"
-                fontSize={8}
+                fontSize={10}
                 fill="#b3aca3"
               >
-                {zone.stackHeight > 0.05 ? zone.stackHeight.toFixed(1) : '—'}
+                {zone.stackHeight > 0.05 ? `${zone.stackHeight.toFixed(1)} m` : '—'}
               </text>
             </g>
           );
@@ -267,11 +268,11 @@ const StackHeatmap: React.FC<Props> = ({
           stroke="rgba(38,35,32,0.34)"
           strokeWidth={1.2}
         />
-        <text x={AXIS_L - 9} y={plotBottom + 13} textAnchor="end" fontSize={9} fill="#b3aca3">
+        <text x={AXIS_L - 9} y={plotBottom + 16} textAnchor="end" fontSize={10} fill="#b3aca3">
           分区
         </text>
-        <text x={AXIS_L - 9} y={plotBottom + 24} textAnchor="end" fontSize={8} fill="#b3aca3">
-          堆高 m
+        <text x={AXIS_L - 9} y={plotBottom + 30} textAnchor="end" fontSize={9} fill="#b3aca3">
+          堆高
         </text>
       </svg>
     </div>

@@ -8,7 +8,7 @@
  * - /src/themes/antd-new/DESIGN-SPEC.md
  * - /skills/third-party/interface-design/SKILL.md
  * - /skills/ui-ux-pro-max/SKILL.md
- * - 用户提供的煤场存煤结构管理业务描述（圆形煤场 36 分区版）
+ * - 用户提供的煤场存煤结构管理业务描述（圆形/条形煤场，每场 2～3 分区）
  */
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
@@ -50,7 +50,6 @@ import {
   LABEL_FIELDS,
   UNMARKED_COLOR,
   YARDS,
-  ZONE_CAPACITY,
   type AuditLog,
   type CoalZone,
   type StockMove,
@@ -59,6 +58,7 @@ import {
   findBatch,
   fmt,
   nextRecordId,
+  shapeLabel,
   shortRegNo,
 } from './data';
 import { compactFieldValue, fieldValue } from './labels';
@@ -80,7 +80,6 @@ import {
   type SurveyPlan,
 } from './model';
 import StackHeatmap from './components/StackHeatmap';
-import YardLocator from './components/YardLocator';
 import LayerMatrix from './components/LayerMatrix';
 import LayerInspector from './components/LayerInspector';
 import SurveyDrawer from './components/SurveyDrawer';
@@ -161,7 +160,7 @@ const ComponentInner: React.FC = () => {
       lastVolume: computedZones.reduce((s, z) => s + z.raw.lastSurveyVolume, 0),
       totalVolume: computedZones.reduce((s, z) => s + z.totalVolume, 0),
       totalMass: computedZones.reduce((s, z) => s + z.totalMass, 0),
-      capacity: computedZones.length * ZONE_CAPACITY,
+      capacity: computedZones.reduce((s, z) => s + z.capacity, 0),
       unmarkedZones: unmarkedZones.length,
       unmarkedVolume: unmarkedZones.reduce(
         (s, z) => s + z.layers.filter((l) => l.raw.status === 'unmarked').reduce((a, l) => a + l.volume, 0),
@@ -244,13 +243,6 @@ const ComponentInner: React.FC = () => {
       }
     }
     message.info('当前煤场没有待人工标记的煤层');
-  };
-
-  const selectZoneTop = (zoneId: string) => {
-    const zone = computedZones.find((z) => z.id === zoneId);
-    const top = zone?.layers[zone.layers.length - 1];
-    if (top) setSelected({ zoneId, layerId: top.id });
-    else message.info(`${zone?.name ?? ''} 为空区，暂无煤层`);
   };
 
   /* ---------------------------- 操作：入库 ---------------------------- */
@@ -775,20 +767,22 @@ const ComponentInner: React.FC = () => {
         <div>
           <h1>煤场存煤结构管理</h1>
           <p>
-            单一煤场视角，按分区 → 分层维护圆形煤场存煤结构。以激光盘煤体积为煤量上限，依扇形楔
-            几何关系计算各分层体积与估算煤量，并反算煤层分界的悬臂俯仰角。
+            单一煤场视角，按分区 → 分层维护存煤结构。圆形煤场按扇形楔、条形煤场按直棱柱计算各分层
+            体积与估算煤量，并反算煤层分界的悬臂俯仰角。
           </p>
         </div>
         <div className="cssm-head-tools">
           <div className="cssm-head-row">
             <span className="cssm-meta">煤场</span>
             <Select
-              style={{ width: 260 }}
+              style={{ width: 300 }}
               value={yardId}
               onChange={(v) => setYardId(v)}
               options={YARDS.map((y) => ({
                 value: y.id,
-                label: `${y.shortName}（${y.zoneCount} 分区${y.hasSurvey ? '' : ' · 无盘煤'}）`,
+                label: `${y.shortName}（${shapeLabel(y.shape)} · ${y.zoneCount} 分区${
+                  y.hasSurvey ? '' : ' · 无盘煤'
+                }）`,
               }))}
             />
           </div>
@@ -965,12 +959,6 @@ const ComponentInner: React.FC = () => {
 
           {viewMode === 'stack' && (
             <div className="cssm-stack-view">
-              <YardLocator
-                zones={computedZones}
-                maxHeight={computedZones[0]?.geometry.maxStackHeight ?? 20}
-                selectedZoneId={selected?.zoneId ?? null}
-                onSelect={selectZoneTop}
-              />
               <StackHeatmap
                 zones={computedZones}
                 labelOf={compactLabelOf}

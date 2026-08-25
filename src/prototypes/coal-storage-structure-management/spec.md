@@ -267,4 +267,7 @@ src/prototypes/coal-storage-structure-management/
   - `needSurveyWarning = plan.some(hasSurveyVolume) && yard.hasSurvey`，厂外中转煤场 `hasSurvey: false` 使盘煤仪二次提示条件恒为假，入库直接提交。
   - 厂外中转煤场 `hasSurvey: false` 时页头「盘煤比对」渲染为 `disabled`，无 `onClick`，抽屉不会打开。
 - `node scripts/check-app-ready.mjs`：在项目级 `tsc` 阶段失败。该失败为**仓库既有问题** —— 对未改动的 `/prototypes/coal-storage-structure` 执行同一脚本同样在 `phase: typecheck` 失败，报错清单一致且不含本原型文件。修复其他原型的历史类型错误超出本次范围，故未处理。
-- 浏览器实测（精简分区版）：左侧圆形定位盘已移除；下拉可切换三个煤场，#1 / #2 显示 36 列、厂外中转显示 3 列；三视图分区数与煤场形态一致；控制台无报错。
+- 浏览器实测（浅色固定布局版，1600 / 1400 / 1100 px）：
+  - 页面为白底浅灰中后台，无米色/水泥棕铬层；存煤结构维护与煤层检视在 1400 px、1100 px 仍左右并排，检视不折到下方，过窄横向滚动。
+  - 工具条与图例单行不换行；点击煤层后右侧检视展示批次、煤种、体积/煤量、俯仰角等明细。
+  - #1 / #2 圆形 36 列、厂外中转条形 3 列，三视图分区数一致；同批作业带在相邻分区呈连续色带，无花格子。厂外中转「盘煤比对」禁用。控制台无运行时报错。

@@ -130,7 +130,7 @@ const SurveyDrawer: React.FC<Props> = ({
       align: 'right',
       render: (_, r) => {
         const delta = planMap.get(r.zone.id)?.delta ?? 0;
-        if (Math.abs(delta) < 0.5) return <span style={{ color: '#b3aca3' }}>—</span>;
+        if (Math.abs(delta) < 0.5) return <span style={{ color: 'rgba(0,0,0,0.25)' }}>—</span>;
         return (
           <span className="cssm-num" style={{ color: delta > 0 ? '#0f8f8c' : '#b8790a' }}>
             {delta > 0 ? '+' : ''}
@@ -160,14 +160,14 @@ const SurveyDrawer: React.FC<Props> = ({
       key: 'action',
       render: (_, r) => {
         const item = planMap.get(r.zone.id);
-        if (!item || item.kind === 'none') return <span style={{ color: '#b3aca3' }}>无变动</span>;
+        if (!item || item.kind === 'none') return <span style={{ color: 'rgba(0,0,0,0.25)' }}>无变动</span>;
         if (item.kind === 'in') {
           return (
             <Space size={4} wrap>
               <Tag color={plan.autoMatched ? 'cyan' : 'red'} style={{ marginInlineEnd: 0 }}>
                 {plan.autoMatched ? '自动识别新增煤层' : '生成待标记煤层'}
               </Tag>
-              <span style={{ fontSize: 11.5, color: '#8b847b' }}>
+              <span style={{ fontSize: 11.5, color: 'rgba(0,0,0,0.45)' }}>
                 起始俯仰角 {item.pitchFrom?.toFixed(1)}° → {item.pitchTo?.toFixed(1)}°
               </span>
             </Space>
@@ -178,7 +178,7 @@ const SurveyDrawer: React.FC<Props> = ({
             <Tag color="gold" style={{ marginInlineEnd: 0 }}>
               自上而下扣减
             </Tag>
-            <span style={{ fontSize: 11.5, color: '#8b847b' }}>
+            <span style={{ fontSize: 11.5, color: 'rgba(0,0,0,0.45)' }}>
               {item.details
                 .map((d) => `${d.regNo ? shortRegNo(d.regNo) : '待标记'} -${fmt(d.mass)} t`)
                 .join(' · ')}

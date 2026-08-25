@@ -11,6 +11,15 @@ import * as geo from '../geometry';
 import { fmt, readableText } from '../data';
 import type { ComputedLayer, ComputedZone } from '../model';
 
+const AXIS = {
+  plot: '#fafafa',
+  plotStroke: '#d9d9d9',
+  grid: '#f0f0f0',
+  tick: '#bfbfbf',
+  label: '#8c8c8c',
+  muted: '#bfbfbf',
+  baseline: '#d9d9d9',
+};
 const BAND_PX = 2.4;
 const PAD_T = 16;
 const PLOT_H = geo.BAND_COUNT * BAND_PX;
@@ -85,8 +94,8 @@ const StackHeatmap: React.FC<Props> = ({
           y={PAD_T}
           width={zones.length * colW}
           height={PLOT_H}
-          fill="#faf9f7"
-          stroke="rgba(38,35,32,0.16)"
+          fill={AXIS.plot}
+          stroke={AXIS.plotStroke}
         />
 
         {/* 每米一条辅助线，10 cm 粒度由煤层方块本身体现 */}
@@ -97,7 +106,7 @@ const StackHeatmap: React.FC<Props> = ({
             y1={yOfHeight(m)}
             x2={axisL + zones.length * colW}
             y2={yOfHeight(m)}
-            stroke="rgba(38,35,32,0.06)"
+            stroke={AXIS.grid}
           />
         ))}
 
@@ -109,9 +118,9 @@ const StackHeatmap: React.FC<Props> = ({
               y1={yOfHeight(m)}
               x2={axisL}
               y2={yOfHeight(m)}
-              stroke="rgba(38,35,32,0.3)"
+              stroke={AXIS.tick}
             />
-            <text x={axisL - 9} y={yOfHeight(m) + 3.4} textAnchor="end" fontSize={9.5} fill="#8b847b">
+            <text x={axisL - 9} y={yOfHeight(m) + 3.4} textAnchor="end" fontSize={9.5} fill={AXIS.label}>
               {m}
             </text>
             <line
@@ -119,23 +128,23 @@ const StackHeatmap: React.FC<Props> = ({
               y1={yOfHeight(m)}
               x2={axisL + zones.length * colW + 5}
               y2={yOfHeight(m)}
-              stroke="rgba(38,35,32,0.3)"
+              stroke={AXIS.tick}
             />
             <text
               x={axisL + zones.length * colW + 9}
               y={yOfHeight(m) + 3.4}
               fontSize={9.5}
-              fill="#8b847b"
+              fill={AXIS.label}
             >
               {geo.pitchFromHeight(g, m) >= 0 ? '+' : ''}
               {geo.pitchFromHeight(g, m).toFixed(1)}°
             </text>
           </g>
         ))}
-        <text x={axisL - 9} y={PAD_T - 5} textAnchor="end" fontSize={9} fill="#b3aca3">
+        <text x={axisL - 9} y={PAD_T - 5} textAnchor="end" fontSize={9} fill={AXIS.muted}>
           堆煤高度 m
         </text>
-        <text x={axisL + zones.length * colW + 9} y={PAD_T - 5} fontSize={9} fill="#b3aca3">
+        <text x={axisL + zones.length * colW + 9} y={PAD_T - 5} fontSize={9} fill={AXIS.muted}>
           俯仰角度
         </text>
 
@@ -151,7 +160,7 @@ const StackHeatmap: React.FC<Props> = ({
                   y1={PAD_T}
                   x2={x}
                   y2={plotBottom}
-                  stroke="rgba(38,35,32,0.05)"
+                  stroke={AXIS.grid}
                 />
               )}
 
@@ -208,7 +217,7 @@ const StackHeatmap: React.FC<Props> = ({
                       y1={yTop}
                       x2={x + colW - 1.5}
                       y2={yTop}
-                      stroke="rgba(38,35,32,0.45)"
+                      stroke={AXIS.tick}
                       strokeWidth={0.9}
                     />
 
@@ -247,7 +256,7 @@ const StackHeatmap: React.FC<Props> = ({
                 textAnchor="middle"
                 fontSize={compact ? 9.5 : axisSize}
                 fontWeight={compact ? (zone.code % 5 === 0 ? 600 : 400) : 600}
-                fill={compact && zone.code % 5 !== 0 ? '#8b847b' : '#5b554e'}
+                fill={compact && zone.code % 5 !== 0 ? AXIS.muted : '#434343'}
               >
                 {compact ? zone.code : zone.name}
               </text>
@@ -256,7 +265,7 @@ const StackHeatmap: React.FC<Props> = ({
                 y={plotBottom + (compact ? 24 : 30)}
                 textAnchor="middle"
                 fontSize={compact ? 8 : 10}
-                fill="#b3aca3"
+                fill={AXIS.muted}
               >
                 {zone.stackHeight > 0.05
                   ? compact
@@ -273,7 +282,7 @@ const StackHeatmap: React.FC<Props> = ({
           y1={plotBottom}
           x2={axisL + zones.length * colW}
           y2={plotBottom}
-          stroke="rgba(38,35,32,0.34)"
+          stroke={AXIS.baseline}
           strokeWidth={1.2}
         />
         <text
@@ -281,7 +290,7 @@ const StackHeatmap: React.FC<Props> = ({
           y={plotBottom + (compact ? 13 : 16)}
           textAnchor="end"
           fontSize={compact ? 9 : 10}
-          fill="#b3aca3"
+          fill={AXIS.muted}
         >
           分区
         </text>
@@ -290,7 +299,7 @@ const StackHeatmap: React.FC<Props> = ({
           y={plotBottom + (compact ? 24 : 30)}
           textAnchor="end"
           fontSize={compact ? 8 : 9}
-          fill="#b3aca3"
+          fill={AXIS.muted}
         >
           {compact ? '堆高 m' : '堆高'}
         </text>

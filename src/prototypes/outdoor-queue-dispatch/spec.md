@@ -161,6 +161,11 @@ src/prototypes/outdoor-queue-dispatch/
 
 ## ✅ 验收记录
 
-- 本原型目录 TypeScript：**待验收**。
-- `ENTRY_KEY=prototypes/outdoor-queue-dispatch npx vite build`：**待验收**。
-- 浏览器：**待验收**。
+- 本原型目录 TypeScript：**无本目录错误**。
+- `ENTRY_KEY=prototypes/outdoor-queue-dispatch npx vite build`：**构建通过**。
+- 浏览器 `http://localhost:51720/prototypes/outdoor-queue-dispatch/`，桌面 1440×900：
+  - 设备状态仅车号识别器、LED，绿/灰圆点；南通道两点在线，北通道 LED 离线，东通道识别器离线。
+  - 日志为控制台「时间 + 内容」；可见「排队成功 / 已在队列中 / 设备异常离线无法正常排队请检查」；无抓拍缩略图。
+  - 界面无云驿排队开关、无云驿接管标签；开启厂外自动排队后日志出现「已调用接口关闭云驿排队」。
+  - 左栏 4:3 监控 + 设备 + 日志，右栏队列；`scrollHeight === clientHeight`，页面不纵向滚动。
+  - 控制台无运行时报错。

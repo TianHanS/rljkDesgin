@@ -290,13 +290,45 @@
   overflow-x: auto;
 }
 
+.cssm-heatmap-inner {
+  display: flex;
+  align-items: flex-start;
+  width: max-content;
+  min-width: 100%;
+}
+
+.cssm-heatmap-axis {
+  flex: 0 0 auto;
+  position: sticky;
+  z-index: 2;
+  background: #ffffff;
+}
+
+.cssm-heatmap-axis.is-left {
+  left: 0;
+  border-right: 1px solid var(--rule-line);
+}
+
+.cssm-heatmap-axis.is-right {
+  right: 0;
+  border-left: 1px solid var(--rule-line);
+}
+
+.cssm-heatmap-plot {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
 .cssm-heatmap-wrap svg {
   display: block;
 }
 
-.cssm-heatmap-wrap.is-wide svg {
+.cssm-heatmap-wrap.is-wide .cssm-heatmap-plot {
+  flex: 1 1 auto;
+}
+
+.cssm-heatmap-wrap.is-wide .cssm-heatmap-plot svg {
   width: 100%;
-  height: auto;
 }
 
 .cssm-hm-layer {

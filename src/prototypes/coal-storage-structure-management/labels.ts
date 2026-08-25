@@ -31,7 +31,7 @@ export const fieldValue = (layer: ComputedLayer, key: string): string => {
     case 'volume':
       return fmt(layer.volume);
     case 'pitchStart':
-      return `${layer.bound.pitchBottom >= 0 ? '+' : ''}${layer.bound.pitchBottom.toFixed(1)}°`;
+      return `${layer.bound.pitchBottom.toFixed(1)}°`;
     case 'regNo':
       return r.regNo || '待标记';
     default:

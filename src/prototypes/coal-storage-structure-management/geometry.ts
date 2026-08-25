@@ -14,12 +14,15 @@
  *
  *   A(h) = h · (W − h/tanθ)        顶宽 = W − 2h/tanθ
  *
- * 煤层分界面由堆料时悬臂俯仰角决定，故堆高与俯仰角互为反函数：
- *   h = pivotHeight + armReach · tan(φ)
+ * 俯仰夹角 φ 是堆煤斜面相对场坪的图形夹角，与挡煤墙高度 h 按正切换算：
+ *   tan(φ) / tan(φmax) = h / H    （φmax = 45°，H = 20 m）
+ *   故 h = 20 · tan(φ)，φ = arctan(h / 20)
+ * 0° 对应场坪，45° 对应 20 m 挡煤墙顶。
  *
  * 参考资料：
  * - /rules/design-guide.md
  * - 用户提供的存煤结构管理业务描述（圆形 36 分区每区 10° / 条形 3 分区、20 m 堆高上限）
+ * - 用户提供的扇形楔俯仰夹角示意图（0°～45° ↔ 0～20 m 挡煤墙）
  */
 
 export type YardShape = 'circular' | 'strip';
@@ -40,12 +43,8 @@ export interface ZoneGeometry {
   reposeAngle: number;
   /** 挡煤墙高度 m */
   wallHeight: number;
-  /** 允许最大堆煤高度 m */
+  /** 允许最大堆煤高度 m（同时作为俯仰夹角换算的挡煤墙作业高度） */
   maxStackHeight: number;
-  /** 悬臂俯仰铰点高度 m */
-  pivotHeight: number;
-  /** 悬臂水平投影长度 m */
-  armReach: number;
 }
 
 /** 圆形封闭煤场：Φ130 m，按分区数均分周向张角 */
@@ -59,8 +58,6 @@ export const circularZoneGeometry = (zoneCount: number): ZoneGeometry => ({
   reposeAngle: 38,
   wallHeight: 22,
   maxStackHeight: 20,
-  pivotHeight: 12,
-  armReach: 40,
 });
 
 /** 条形煤场：全场长 240 m，底宽 50 m，按分区数均分长度 */
@@ -74,14 +71,14 @@ export const stripZoneGeometry = (zoneCount: number): ZoneGeometry => ({
   reposeAngle: 38,
   wallHeight: 18,
   maxStackHeight: 20,
-  pivotHeight: 10,
-  armReach: 35,
 });
 
 /** 实际堆煤视图的分带高度 m（20 m 上限划分为 200 个 10 cm 方块） */
 export const BAND_HEIGHT = 0.1;
 /** 分带总数 */
 export const BAND_COUNT = 200;
+/** 图形最大俯仰夹角 °，对应挡煤墙作业高度 20 m */
+export const MAX_PITCH_DEG = 45;
 
 const toRad = (deg: number) => (deg * Math.PI) / 180;
 const toDeg = (rad: number) => (rad * 180) / Math.PI;
@@ -136,19 +133,22 @@ export const heightFromVolume = (g: ZoneGeometry, volume: number) => {
   return (lo + hi) / 2;
 };
 
-/** 堆高 → 悬臂俯仰角 ° */
+/**
+ * 堆高 → 俯仰夹角 °。
+ * 图形夹角与挡煤墙高度按正切比例换算：φ / 对应 tan 比 = h / H。
+ */
 export const pitchFromHeight = (g: ZoneGeometry, h: number) =>
-  toDeg(Math.atan((h - g.pivotHeight) / g.armReach));
+  toDeg(Math.atan((Math.max(0, h) / g.maxStackHeight) * Math.tan(toRad(MAX_PITCH_DEG))));
 
-/** 悬臂俯仰角 ° → 堆高 m */
+/** 俯仰夹角 ° → 堆高 m */
 export const heightFromPitch = (g: ZoneGeometry, pitch: number) =>
-  g.pivotHeight + g.armReach * Math.tan(toRad(pitch));
+  g.maxStackHeight * Math.tan(toRad(pitch)) / Math.tan(toRad(MAX_PITCH_DEG));
 
-/** 俯仰角 ° → 累计体积 m³（用于按角度配置煤层时反算煤量） */
+/** 俯仰夹角 ° → 累计体积 m³（用于按角度配置煤层时反算煤量） */
 export const volumeFromPitch = (g: ZoneGeometry, pitch: number) =>
   stackVolume(g, Math.max(0, heightFromPitch(g, pitch)));
 
-/** 俯仰角可用区间 ° */
+/** 俯仰夹角可用区间 °：场坪 0° ～ 挡煤墙顶 45° */
 export const pitchRange = (g: ZoneGeometry) => ({
   min: pitchFromHeight(g, 0),
   max: pitchFromHeight(g, g.maxStackHeight),

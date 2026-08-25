@@ -1,10 +1,11 @@
 /**
  * 煤场存煤结构管理 · 计算模型与业务规则
  *
- * 承载三类规则：
- * 1. 分层几何派生：层体积 → 累计体积 → 标高 → 分界俯仰角
- * 2. 盘煤比对：体积增加按周期内接卸批次做全煤场密度匹配；体积减少自上而下扣减
- * 3. 人工维护：标记批次、按煤量/角度调整、相邻层合并、厂外煤场手动出入库
+ * 承载四类规则：
+ * 1. 分层几何派生：层体积 → 累计体积 → 标高 → 起始/结束俯仰角
+ * 2. 盘煤比对：体积增加按周期内入厂批次做全煤场密度匹配；体积减少自上而下扣减
+ * 3. 出入库：入库在顶层新增煤层（可多分区同时铺层）；出库按后进先出扣减
+ * 4. 分层维护：拆分、合并上层/下层、删除表层、标记未识别煤层
  *
  * 参考资料：
  * - 用户提供的存煤结构管理业务描述
@@ -101,41 +102,17 @@ export const computeZone = (zone: CoalZone): ComputedZone => {
 
 /* ============================ 层序操作原语 ============================ */
 
-/** 自上而下扣减指定体积，返回新的层序列与逐层扣减明细 */
-export const deductFromTop = (layers: CoalLayer[], volume: number) => {
-  const next = layers.map((l) => ({ ...l }));
-  const cuts: { layer: CoalLayer; volume: number }[] = [];
-  let remaining = volume;
-  for (let i = next.length - 1; i >= 0 && remaining > 0.01; i -= 1) {
-    const cut = Math.min(next[i].volume, remaining);
-    cuts.push({ layer: next[i], volume: cut });
-    next[i].volume -= cut;
-    remaining -= cut;
-  }
-  return { layers: next.filter((l) => l.volume > 0.01), cuts };
-};
-
-/** 在顶部堆叠新煤层；顶层为同批次时直接并入，符合连续堆煤的实际形态 */
-export const stackOnTop = (layers: CoalLayer[], layer: CoalLayer) => {
-  const top = layers[layers.length - 1];
-  if (top && layer.batchNo && top.batchNo === layer.batchNo && top.status === 'marked') {
-    const next = layers.slice(0, -1);
-    return [...next, { ...top, volume: top.volume + layer.volume, stackedAt: layer.stackedAt }];
-  }
-  return [...layers, layer];
-};
-
 export const makeLayer = (params: {
-  batchNo: string;
+  regNo: string;
   volume: number;
   density: number;
   stackedAt: string;
 }): CoalLayer => {
-  const batch = findBatch(params.batchNo);
+  const batch = findBatch(params.regNo);
   if (!batch) {
     return {
       id: nextLayerId(),
-      batchNo: '',
+      regNo: '',
       shipName: '',
       voyage: '',
       coalType: '',
@@ -149,7 +126,7 @@ export const makeLayer = (params: {
   }
   return {
     id: nextLayerId(),
-    batchNo: batch.batchNo,
+    regNo: batch.regNo,
     shipName: batch.shipName,
     voyage: batch.voyage,
     coalType: batch.coalType,
@@ -162,19 +139,307 @@ export const makeLayer = (params: {
   };
 };
 
+/** 自上而下按体积扣减，返回新的层序列与逐层扣减明细 */
+export const deductVolumeFromTop = (layers: CoalLayer[], volume: number) => {
+  const next = layers.map((l) => ({ ...l }));
+  const cuts: { layer: CoalLayer; volume: number; mass: number }[] = [];
+  let remaining = volume;
+  for (let i = next.length - 1; i >= 0 && remaining > 0.01; i -= 1) {
+    const cut = Math.min(next[i].volume, remaining);
+    cuts.push({ layer: next[i], volume: cut, mass: cut * next[i].density });
+    next[i].volume -= cut;
+    remaining -= cut;
+  }
+  return { layers: next.filter((l) => l.volume > 0.01), cuts, shortage: remaining };
+};
+
+/** 自上而下按煤量扣减（后进先出），逐层用各层自身密度折算体积 */
+export const deductMassFromTop = (layers: CoalLayer[], mass: number) => {
+  const next = layers.map((l) => ({ ...l }));
+  const cuts: { layer: CoalLayer; volume: number; mass: number }[] = [];
+  let remaining = mass;
+  for (let i = next.length - 1; i >= 0 && remaining > 0.01; i -= 1) {
+    const layerMass = next[i].volume * next[i].density;
+    const cutMass = Math.min(layerMass, remaining);
+    const cutVolume = next[i].density > 0 ? cutMass / next[i].density : 0;
+    cuts.push({ layer: next[i], volume: cutVolume, mass: cutMass });
+    next[i].volume = Math.max(0, next[i].volume - cutVolume);
+    remaining -= cutMass;
+  }
+  return { layers: next.filter((l) => l.volume > 0.01), cuts, shortage: remaining };
+};
+
+/** 在顶层堆叠新煤层；顶层为同一入厂批次时并入，符合连续堆煤的实际形态 */
+export const stackOnTop = (layers: CoalLayer[], layer: CoalLayer) => {
+  const top = layers[layers.length - 1];
+  if (top && layer.regNo && top.regNo === layer.regNo && top.status === 'marked') {
+    return [
+      ...layers.slice(0, -1),
+      { ...top, volume: top.volume + layer.volume, stackedAt: layer.stackedAt },
+    ];
+  }
+  return [...layers, layer];
+};
+
+/* ============================ 操作：入库 ============================ */
+
+export interface InboundPlanItem {
+  zoneId: string;
+  zoneName: string;
+  /** 分摊到该分区的煤量 t */
+  mass: number;
+  /** 折算体积 m³ */
+  volume: number;
+  heightFrom: number;
+  heightTo: number;
+  /** 新增煤层的起始（层底）俯仰角 ° */
+  pitchFrom: number;
+  /** 新增煤层的结束（层顶）俯仰角 ° */
+  pitchTo: number;
+  /** 入库后是否超出分区几何容量 */
+  overCapacity: boolean;
+  /** 该分区已有盘煤体积（决定是否需要二次提示） */
+  hasSurveyVolume: boolean;
+}
+
+/**
+ * 入库：圆形煤场堆料机绕中心连续回转，在所选扇区上铺同一层煤，
+ * 故总煤量在所选分区间平均分摊，各分区新增煤层的俯仰夹角由几何关系反算。
+ */
+export const buildInboundPlan = (
+  zones: CoalZone[],
+  zoneIds: string[],
+  totalMass: number,
+  density: number,
+): InboundPlanItem[] => {
+  if (zoneIds.length === 0 || totalMass <= 0 || density <= 0) return [];
+  const perZoneMass = totalMass / zoneIds.length;
+  return zoneIds
+    .map((id) => zones.find((z) => z.id === id))
+    .filter((z): z is CoalZone => Boolean(z))
+    .sort((a, b) => a.code - b.code)
+    .map((zone) => {
+      const current = zone.layers.reduce((s, l) => s + l.volume, 0);
+      const volume = perZoneMass / density;
+      const heightFrom = geo.heightFromVolume(zone.geometry, current);
+      const heightTo = geo.heightFromVolume(zone.geometry, current + volume);
+      return {
+        zoneId: zone.id,
+        zoneName: zone.name,
+        mass: perZoneMass,
+        volume,
+        heightFrom,
+        heightTo,
+        pitchFrom: geo.pitchFromHeight(zone.geometry, heightFrom),
+        pitchTo: geo.pitchFromHeight(zone.geometry, heightTo),
+        overCapacity: current + volume > geo.capacityVolume(zone.geometry) + 0.5,
+        hasSurveyVolume: zone.surveyVolume > 0.5,
+      };
+    });
+};
+
+export const applyInbound = (
+  zones: CoalZone[],
+  plan: InboundPlanItem[],
+  regNo: string,
+  density: number,
+  stackedAt: string,
+): CoalZone[] =>
+  zones.map((zone) => {
+    const item = plan.find((p) => p.zoneId === zone.id);
+    if (!item) return zone;
+    const layers = stackOnTop(
+      zone.layers,
+      makeLayer({ regNo, volume: item.volume, density, stackedAt }),
+    );
+    const total = layers.reduce((s, l) => s + l.volume, 0);
+    // 手动入库改变实际存煤，盘煤体积上限同步抬升
+    return { ...zone, layers, surveyVolume: Math.max(zone.surveyVolume, total) };
+  });
+
+/* ============================ 操作：出库 ============================ */
+
+export const applyOutbound = (
+  zones: CoalZone[],
+  zoneId: string,
+  mass: number,
+): {
+  zones: CoalZone[];
+  cuts: { layer: CoalLayer; volume: number; mass: number }[];
+  shortage: number;
+} => {
+  let cuts: { layer: CoalLayer; volume: number; mass: number }[] = [];
+  let shortage = 0;
+  const next = zones.map((zone) => {
+    if (zone.id !== zoneId) return zone;
+    const result = deductMassFromTop(zone.layers, mass);
+    cuts = result.cuts;
+    shortage = result.shortage;
+    const total = result.layers.reduce((s, l) => s + l.volume, 0);
+    return { ...zone, layers: result.layers, surveyVolume: total };
+  });
+  return { zones: next, cuts, shortage };
+};
+
+/* ============================ 操作：分层拆分 ============================ */
+
+export interface SplitRow {
+  /** 入厂登记编号，留空表示该子层仍为待标记 */
+  regNo: string;
+  /** 起始（层底）俯仰角 ° */
+  pitchStart: number;
+  /** 结束（层顶）俯仰角 ° */
+  pitchEnd: number;
+}
+
+export interface SplitPreviewRow extends SplitRow {
+  volume: number;
+  /** 占原煤层体积比例 */
+  ratio: number;
+  mass: number;
+  heightStart: number;
+  heightEnd: number;
+  valid: boolean;
+}
+
+/**
+ * 拆分预览。行序自上而下：首行的结束角度锁定为原层顶角，末行的起始角度锁定为原层底角，
+ * 中间各行的结束角度自动取上一行的起始角度。
+ */
+export const buildSplitPreview = (
+  g: geo.ZoneGeometry,
+  layer: ComputedLayer,
+  rows: SplitRow[],
+): SplitPreviewRow[] =>
+  rows.map((row) => {
+    const heightStart = Math.max(0, geo.heightFromPitch(g, row.pitchStart));
+    const heightEnd = Math.max(0, geo.heightFromPitch(g, row.pitchEnd));
+    const volume = geo.stackVolume(g, heightEnd) - geo.stackVolume(g, heightStart);
+    return {
+      ...row,
+      heightStart,
+      heightEnd,
+      volume,
+      ratio: layer.volume > 0 ? volume / layer.volume : 0,
+      mass: volume * layer.raw.density,
+      valid: volume > 0.01,
+    };
+  });
+
+/** 按行序自上而下的拆分结果写回煤层序列（存储顺序为自下而上） */
+export const applySplit = (
+  zones: CoalZone[],
+  zoneId: string,
+  layerId: string,
+  preview: SplitPreviewRow[],
+  density: number,
+  stackedAt: string,
+): CoalZone[] =>
+  zones.map((zone) => {
+    if (zone.id !== zoneId) return zone;
+    const index = zone.layers.findIndex((l) => l.id === layerId);
+    if (index < 0) return zone;
+    const origin = zone.layers[index];
+    const created = [...preview]
+      .reverse()
+      .filter((r) => r.volume > 0.01)
+      .map((r) =>
+        r.regNo
+          ? makeLayer({ regNo: r.regNo, volume: r.volume, density, stackedAt })
+          : {
+              ...makeLayer({ regNo: '', volume: r.volume, density, stackedAt }),
+              stackedAt: origin.stackedAt,
+            },
+      );
+    const layers = [...zone.layers];
+    layers.splice(index, 1, ...created);
+    return { ...zone, layers };
+  });
+
+/* ============================ 操作：分层合并 ============================ */
+
+export interface MergePair {
+  /** 保留批次归属的基准层 */
+  keep: ComputedLayer;
+  /** 被合并（吸收）的煤层 */
+  absorbed: ComputedLayer;
+}
+
+export const resolveMergePair = (
+  zone: ComputedZone,
+  layerId: string,
+  direction: 'up' | 'down',
+): MergePair | null => {
+  const keep = zone.layers.find((l) => l.id === layerId);
+  if (!keep) return null;
+  const absorbed = zone.layers.find((l) => l.seq === keep.seq + (direction === 'up' ? 1 : -1));
+  if (!absorbed) return null;
+  return { keep, absorbed };
+};
+
+export const applyMerge = (
+  zones: CoalZone[],
+  zoneId: string,
+  layerId: string,
+  direction: 'up' | 'down',
+): CoalZone[] =>
+  zones.map((zone) => {
+    if (zone.id !== zoneId) return zone;
+    const index = zone.layers.findIndex((l) => l.id === layerId);
+    const other = direction === 'up' ? index + 1 : index - 1;
+    if (index < 0 || other < 0 || other >= zone.layers.length) return zone;
+    const keep = zone.layers[index];
+    const drop = zone.layers[other];
+    const merged: CoalLayer = {
+      ...keep,
+      volume: keep.volume + drop.volume,
+      density:
+        (keep.volume * keep.density + drop.volume * drop.density) / (keep.volume + drop.volume),
+      stackedAt: keep.stackedAt < drop.stackedAt ? keep.stackedAt : drop.stackedAt,
+      adjusted: true,
+    };
+    const lower = Math.min(index, other);
+    const layers = zone.layers.filter((_, i) => i !== index && i !== other);
+    layers.splice(lower, 0, merged);
+    return { ...zone, layers };
+  });
+
+/* ============================ 操作：删除与标记 ============================ */
+
+/** 删除煤层。仅表层（顶层）可直接删除，不形成出入库记录 */
+export const deleteLayer = (zones: CoalZone[], zoneId: string, layerId: string): CoalZone[] =>
+  zones.map((zone) => {
+    if (zone.id !== zoneId) return zone;
+    const layers = zone.layers.filter((l) => l.id !== layerId);
+    const total = layers.reduce((s, l) => s + l.volume, 0);
+    return { ...zone, layers, surveyVolume: total };
+  });
+
+export const replaceLayer = (
+  zones: CoalZone[],
+  zoneId: string,
+  layerId: string,
+  patch: Partial<CoalLayer>,
+): CoalZone[] =>
+  zones.map((z) =>
+    z.id === zoneId
+      ? { ...z, layers: z.layers.map((l) => (l.id === layerId ? { ...l, ...patch } : l)) }
+      : z,
+  );
+
 /* ============================ 盘煤比对 ============================ */
 
 export interface SurveyInput {
   yardId: string;
   /** zoneId → 本次盘煤体积 m³ */
   volumes: Record<string, number>;
-  /** 勾选的周期内接卸批次 */
-  batchNos: string[];
+  /** 勾选的周期内入厂批次（入厂登记编号） */
+  regNos: string[];
   defaultDensity: number;
 }
 
 export interface SurveyPlanDetail {
-  batchNo: string;
+  regNo: string;
   coalTypeName: string;
   volume: number;
   mass: number;
@@ -187,7 +452,6 @@ export interface SurveyPlanItem {
   newVolume: number;
   delta: number;
   kind: 'in' | 'out' | 'none';
-  /** 新增层的起始／终止俯仰角（体积增加时给出） */
   pitchFrom: number | null;
   pitchTo: number | null;
   details: SurveyPlanDetail[];
@@ -195,15 +459,10 @@ export interface SurveyPlanItem {
 
 export interface SurveyPlan {
   items: SurveyPlanItem[];
-  /** 全煤场新增体积合计 m³ */
   increaseVolume: number;
-  /** 全煤场减少体积合计 m³ */
   decreaseVolume: number;
-  /** 勾选批次卸煤量合计 t */
   batchMass: number;
-  /** 匹配密度 = 批次煤量 / 新增体积 */
   matchDensity: number | null;
-  /** 密度是否落在合理区间，决定能否自动识别批次 */
   autoMatched: boolean;
   inMass: number;
   outMass: number;
@@ -213,12 +472,12 @@ export interface SurveyPlan {
 /**
  * 依据盘煤体积变动构造处理方案。
  * 增加：以全煤场为口径计算 ρ = Σ批次煤量 / Σ新增体积；ρ 落在合理区间则各分区新增煤层
- *       按批次煤量比例自动识别为对应批次，否则生成待标记煤层（估算煤量按默认密度）。
+ *       按批次煤量比例自动识别为对应入厂批次，否则生成待标记煤层（估算煤量按默认密度）。
  * 减少：按煤层顺序自上而下扣减，逐批次形成出库明细。
  */
 export const buildSurveyPlan = (zones: CoalZone[], input: SurveyInput): SurveyPlan => {
   const scoped = zones.filter((z) => z.yardId === input.yardId);
-  const batches = input.batchNos
+  const batches = input.regNos
     .map((no) => findBatch(no))
     .filter((b): b is ArrivalBatch => Boolean(b))
     .sort((a, b) => a.unloadedAt.localeCompare(b.unloadedAt));
@@ -263,7 +522,7 @@ export const buildSurveyPlan = (zones: CoalZone[], input: SurveyInput): SurveyPl
         ? batches.map((b) => {
             const volume = (delta * b.unloadedMass) / batchMass;
             return {
-              batchNo: b.batchNo,
+              regNo: b.regNo,
               coalTypeName: coalTypeName(b.coalType),
               volume,
               mass: volume * (matchDensity as number),
@@ -271,7 +530,7 @@ export const buildSurveyPlan = (zones: CoalZone[], input: SurveyInput): SurveyPl
           })
         : [
             {
-              batchNo: '',
+              regNo: '',
               coalTypeName: '待标记',
               volume: delta,
               mass: delta * input.defaultDensity,
@@ -289,12 +548,12 @@ export const buildSurveyPlan = (zones: CoalZone[], input: SurveyInput): SurveyPl
     }
 
     if (delta < -0.01) {
-      const { cuts } = deductFromTop(zone.layers, -delta);
+      const { cuts } = deductVolumeFromTop(zone.layers, -delta);
       const details = cuts.map((c) => ({
-        batchNo: c.layer.batchNo,
-        coalTypeName: c.layer.batchNo ? coalTypeName(c.layer.coalType) : '待标记',
+        regNo: c.layer.regNo,
+        coalTypeName: c.layer.regNo ? coalTypeName(c.layer.coalType) : '待标记',
         volume: c.volume,
-        mass: c.volume * c.layer.density,
+        mass: c.mass,
       }));
       outMass += details.reduce((s, d) => s + d.mass, 0);
       return { ...base, kind: 'out', details };
@@ -316,7 +575,6 @@ export const buildSurveyPlan = (zones: CoalZone[], input: SurveyInput): SurveyPl
   };
 };
 
-/** 将盘煤方案落到煤层结构上，返回新的分区数组 */
 export const applySurveyPlan = (
   zones: CoalZone[],
   plan: SurveyPlan,
@@ -336,11 +594,11 @@ export const applySurveyPlan = (
         const density = d.volume > 0 ? d.mass / d.volume : input.defaultDensity;
         layers = stackOnTop(
           layers,
-          makeLayer({ batchNo: d.batchNo, volume: d.volume, density, stackedAt }),
+          makeLayer({ regNo: d.regNo, volume: d.volume, density, stackedAt }),
         );
       });
     } else {
-      layers = deductFromTop(layers, -item.delta).layers;
+      layers = deductVolumeFromTop(layers, -item.delta).layers;
     }
 
     return {
@@ -350,142 +608,3 @@ export const applySurveyPlan = (
       surveyVolume: item.newVolume,
     };
   });
-
-/* ============================ 人工维护 ============================ */
-
-export const replaceLayer = (
-  zones: CoalZone[],
-  zoneId: string,
-  layerId: string,
-  patch: Partial<CoalLayer>,
-): CoalZone[] =>
-  zones.map((z) =>
-    z.id === zoneId
-      ? { ...z, layers: z.layers.map((l) => (l.id === layerId ? { ...l, ...patch } : l)) }
-      : z,
-  );
-
-/**
- * 调整某层体积。差额优先与相邻上层借还，以保持分区总体积不超过盘煤体积上限；
- * 顶层调整时允许总体积变化，剩余量记为「未分配体积」。
- */
-export const resizeLayer = (
-  zones: CoalZone[],
-  zoneId: string,
-  layerId: string,
-  newVolume: number,
-): { zones: CoalZone[]; applied: number; borrowed: number } => {
-  let applied = newVolume;
-  let borrowed = 0;
-  const next = zones.map((z) => {
-    if (z.id !== zoneId) return z;
-    const index = z.layers.findIndex((l) => l.id === layerId);
-    if (index < 0) return z;
-    const layers = z.layers.map((l) => ({ ...l }));
-    const above = layers[index + 1];
-    let diff = Math.max(0, newVolume) - layers[index].volume;
-    // 向上层借用体积时不得超过上层存量，保持分区总体积不变
-    if (above && diff > above.volume) diff = above.volume;
-    applied = layers[index].volume + diff;
-    borrowed = above ? diff : 0;
-    layers[index].volume = applied;
-    layers[index].adjusted = true;
-    if (above) above.volume = Math.max(0, above.volume - diff);
-    return { ...z, layers: layers.filter((l) => l.volume > 0.01) };
-  });
-  return { zones: next, applied, borrowed };
-};
-
-/** 合并相邻煤层，保留基准层的批次归属 */
-export const mergeWithNeighbour = (
-  zones: CoalZone[],
-  zoneId: string,
-  layerId: string,
-  direction: 'up' | 'down',
-): CoalZone[] =>
-  zones.map((z) => {
-    if (z.id !== zoneId) return z;
-    const index = z.layers.findIndex((l) => l.id === layerId);
-    const other = direction === 'up' ? index + 1 : index - 1;
-    if (index < 0 || other < 0 || other >= z.layers.length) return z;
-    const keep = z.layers[index];
-    const drop = z.layers[other];
-    const merged: CoalLayer = {
-      ...keep,
-      volume: keep.volume + drop.volume,
-      density:
-        (keep.volume * keep.density + drop.volume * drop.density) / (keep.volume + drop.volume),
-      stackedAt: keep.stackedAt < drop.stackedAt ? keep.stackedAt : drop.stackedAt,
-      adjusted: true,
-    };
-    const lower = Math.min(index, other);
-    const layers = z.layers.filter((_, i) => i !== index && i !== other);
-    layers.splice(lower, 0, merged);
-    return { ...z, layers };
-  });
-
-/** 厂外煤场手动入库：按煤量登记，折算体积后堆到目标分区顶部 */
-export const manualInbound = (
-  zones: CoalZone[],
-  zoneId: string,
-  params: { batchNo: string; mass: number; density: number; stackedAt: string },
-): CoalZone[] =>
-  zones.map((z) => {
-    if (z.id !== zoneId) return z;
-    const volume = params.mass / params.density;
-    const layers = stackOnTop(
-      z.layers,
-      makeLayer({
-        batchNo: params.batchNo,
-        volume,
-        density: params.density,
-        stackedAt: params.stackedAt,
-      }),
-    );
-    const total = layers.reduce((s, l) => s + l.volume, 0);
-    return { ...z, layers, lastSurveyVolume: z.surveyVolume, surveyVolume: total };
-  });
-
-/** 按煤量自上而下扣减：逐层用各层自身密度折算体积，返回逐层出库明细 */
-export const deductMassFromTop = (layers: CoalLayer[], mass: number) => {
-  const next = layers.map((l) => ({ ...l }));
-  const cuts: { layer: CoalLayer; volume: number; mass: number }[] = [];
-  let remaining = mass;
-  for (let i = next.length - 1; i >= 0 && remaining > 0.01; i -= 1) {
-    const layerMass = next[i].volume * next[i].density;
-    const cutMass = Math.min(layerMass, remaining);
-    const cutVolume = next[i].density > 0 ? cutMass / next[i].density : 0;
-    cuts.push({ layer: next[i], volume: cutVolume, mass: cutMass });
-    next[i].volume = Math.max(0, next[i].volume - cutVolume);
-    remaining -= cutMass;
-  }
-  return { layers: next.filter((l) => l.volume > 0.01), cuts, shortage: remaining };
-};
-
-/** 厂外煤场手动出库：按煤量自上而下扣减 */
-export const manualOutbound = (
-  zones: CoalZone[],
-  zoneId: string,
-  mass: number,
-): {
-  zones: CoalZone[];
-  cuts: { layer: CoalLayer; volume: number; mass: number }[];
-  shortage: number;
-} => {
-  let cuts: { layer: CoalLayer; volume: number; mass: number }[] = [];
-  let shortage = 0;
-  const next = zones.map((z) => {
-    if (z.id !== zoneId) return z;
-    const result = deductMassFromTop(z.layers, mass);
-    cuts = result.cuts;
-    shortage = result.shortage;
-    const total = result.layers.reduce((s, l) => s + l.volume, 0);
-    return {
-      ...z,
-      layers: result.layers,
-      lastSurveyVolume: z.surveyVolume,
-      surveyVolume: total,
-    };
-  });
-  return { zones: next, cuts, shortage };
-};

@@ -3,7 +3,7 @@
 /*
  * 煤场存煤结构管理
  * 设计意图：像一份工程剖面图纸 —— 冷静、密实、有刻度、可信。
- * 色彩取自煤场实景：场坪水泥、挡煤墙混凝土、煤黑、激光扫描青、斗轮工程黄、火警橙。
+ * 色彩取自煤场实景：场坪水泥、挡煤墙混凝土、煤黑、激光扫描青、斗轮工程黄、异常红。
  * 深度策略：仅用描边（borders-only），不混用阴影。
  */
 
@@ -28,7 +28,7 @@
   /* 语义 */
   --scan-teal: #0f8f8c;
   --stacker-amber: #b8790a;
-  --unmarked-flare: #e8590c;
+  --unmarked-flare: #cf1322;
   --control-accent: #1677ff;
 
   min-height: 100vh;
@@ -73,7 +73,7 @@
 
 .cssm-head p {
   margin: 6px 0 0 14px;
-  max-width: 620px;
+  max-width: 640px;
   font-size: 12.5px;
   line-height: 1.6;
   color: var(--coal-ink-faint);
@@ -105,131 +105,47 @@
   color: var(--coal-ink-soft);
 }
 
-/* ============================ 盘煤差量条 ============================ */
+/* ============================ 库存统计看板 ============================ */
 
-.cssm-strip {
+.cssm-board {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 20px;
-  align-items: stretch;
+  grid-template-columns: minmax(0, 2.1fr) repeat(3, minmax(0, 1fr));
+  gap: 12px;
   margin-bottom: 12px;
+}
+
+.cssm-board-cell {
   padding: 12px 16px;
   border: 1px solid var(--rule-line);
-  border-left: 3px solid var(--scan-teal);
   border-radius: 8px;
   background: var(--yard-surface);
 }
 
-.cssm-strip.is-manual {
-  border-left-color: var(--stacker-amber);
-}
-
-.cssm-strip-hd {
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
-  margin-bottom: 10px;
-}
-
-.cssm-strip-hd h2 {
-  margin: 0;
-  font-size: 13px;
-  font-weight: 650;
-}
-
-.cssm-strip-hd span {
-  font-size: 11.5px;
-  color: var(--coal-ink-faint);
-}
-
-/* 每个分区一根发散条：向上为体积增加，向下为减少 */
-.cssm-delta {
-  display: flex;
-  align-items: stretch;
-  gap: 4px;
-  min-height: 62px;
-}
-
-.cssm-delta-item {
-  display: flex;
-  flex: 1 1 0;
-  min-width: 30px;
-  flex-direction: column;
+.cssm-board-cell.is-pair {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  gap: 16px;
   align-items: center;
-  cursor: pointer;
-  border: 1px solid transparent;
-  border-radius: 4px;
-  transition: background-color 0.16s ease, border-color 0.16s ease;
+  border-left: 3px solid var(--scan-teal);
 }
 
-.cssm-delta-item:hover {
-  background: var(--yard-inset);
-  border-color: var(--rule-line);
-}
-
-.cssm-delta-item:focus-visible {
-  outline: 2px solid var(--rule-focus);
-  outline-offset: 1px;
-}
-
-.cssm-delta-up,
-.cssm-delta-down {
-  display: flex;
-  width: 100%;
-  height: 20px;
-  justify-content: center;
-}
-
-.cssm-delta-up {
-  align-items: flex-end;
-}
-
-.cssm-delta-bar {
-  width: 60%;
-  min-width: 8px;
-  max-width: 22px;
-  border-radius: 2px 2px 0 0;
-  background: var(--scan-teal);
-}
-
-.cssm-delta-down .cssm-delta-bar {
-  border-radius: 0 0 2px 2px;
-  background: var(--stacker-amber);
-}
-
-.cssm-delta-axis {
-  width: 100%;
-  height: 1px;
-  background: var(--rule-firm);
-}
-
-.cssm-delta-code {
-  margin-top: 4px;
-  font-size: 10.5px;
-  color: var(--coal-ink-faint);
-}
-
-.cssm-delta-val {
-  font-size: 10px;
-  line-height: 1.4;
-  color: var(--coal-ink-ghost);
-}
-
-.cssm-strip-figures {
-  display: flex;
-  align-items: stretch;
-  gap: 0;
-  padding-left: 20px;
+.cssm-board-cell.is-pair > div + div {
+  padding-left: 16px;
   border-left: 1px solid var(--rule-hair);
 }
 
-.cssm-figure {
-  min-width: 104px;
-  padding: 0 14px;
+.cssm-board-delta {
+  font-size: 12.5px;
+  font-weight: 650;
+  white-space: nowrap;
 }
 
-.cssm-figure + .cssm-figure {
-  border-left: 1px solid var(--rule-hair);
+.cssm-board-delta .is-scan {
+  color: var(--scan-teal);
+}
+
+.cssm-board-delta .is-draw {
+  color: var(--stacker-amber);
 }
 
 .cssm-figure-k {
@@ -240,9 +156,9 @@
 .cssm-figure-v {
   display: flex;
   align-items: baseline;
-  gap: 3px;
+  gap: 4px;
   margin-top: 4px;
-  font-size: 19px;
+  font-size: 21px;
   font-weight: 650;
   line-height: 1.2;
 }
@@ -254,12 +170,9 @@
   color: var(--coal-ink-ghost);
 }
 
-.cssm-figure-v.is-scan {
-  color: var(--scan-teal);
-}
-
-.cssm-figure-v.is-draw {
-  color: var(--stacker-amber);
+.cssm-figure-v.is-muted {
+  color: var(--coal-ink-faint);
+  font-size: 18px;
 }
 
 .cssm-figure-v.is-flare {
@@ -267,8 +180,9 @@
 }
 
 .cssm-figure-sub {
-  margin-top: 2px;
+  margin-top: 4px;
   font-size: 11px;
+  line-height: 1.5;
   color: var(--coal-ink-ghost);
 }
 
@@ -293,6 +207,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  flex-wrap: wrap;
   padding: 10px 14px;
   border-bottom: 1px solid var(--rule-hair);
 }
@@ -322,7 +237,7 @@
   color: var(--coal-ink-faint);
 }
 
-/* 图例：色族 = 煤种，色阶 = 批次 */
+/* 图例：色族 = 库存煤种，色阶 = 入厂登记编号 */
 .cssm-legend {
   display: flex;
   align-items: center;
@@ -357,76 +272,69 @@
   color: var(--coal-ink-ghost);
 }
 
-/* ============================ 剖面视图 ============================ */
+/* ============================ 实际堆煤视图 ============================ */
 
-.cssm-sections {
+.cssm-stack-view {
   display: flex;
-  gap: 8px;
-  padding: 14px 14px 6px;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 14px;
+}
+
+.cssm-heatmap-wrap {
+  flex: 1 1 auto;
+  min-width: 0;
   overflow-x: auto;
 }
 
-.cssm-zone {
-  flex: 0 0 auto;
-  border: 1px solid transparent;
-  border-radius: 6px;
-  padding: 2px;
-  transition: background-color 0.16s ease, border-color 0.16s ease;
-}
-
-.cssm-zone.is-active {
-  border-color: var(--rule-focus);
-  background: rgba(22, 119, 255, 0.04);
-}
-
-.cssm-zone svg {
+.cssm-heatmap-wrap svg {
   display: block;
 }
 
-.cssm-zone-layer {
+.cssm-hm-layer {
+  cursor: pointer;
+}
+
+.cssm-hm-layer:hover {
+  opacity: 0.84;
+}
+
+.cssm-hm-layer:focus-visible {
+  outline: 2px solid var(--rule-focus);
+}
+
+.cssm-locator {
+  flex: 0 0 auto;
+  width: 196px;
+  padding: 4px 4px 0;
+}
+
+.cssm-locator svg {
+  display: block;
+  margin: 0 auto;
+}
+
+.cssm-locator-sector {
   cursor: pointer;
   transition: opacity 0.16s ease;
 }
 
-.cssm-zone-layer:hover {
-  opacity: 0.86;
+.cssm-locator-sector:hover {
+  opacity: 0.72;
 }
 
-.cssm-zone-foot {
-  padding: 4px 6px 2px;
-  border-top: 1px solid var(--rule-hair);
+.cssm-locator-sector:focus-visible {
+  outline: 2px solid var(--rule-focus);
 }
 
-.cssm-zone-name {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  font-size: 12px;
-  font-weight: 650;
-}
-
-.cssm-zone-name em {
-  font-style: normal;
+.cssm-locator-note {
+  margin-top: 8px;
   font-size: 10.5px;
-  font-weight: 500;
+  line-height: 1.6;
   color: var(--coal-ink-ghost);
 }
 
-.cssm-zone-kv {
-  display: flex;
-  justify-content: space-between;
-  margin-top: 3px;
-  font-size: 10.5px;
-  color: var(--coal-ink-faint);
-}
-
-.cssm-zone-empty {
-  margin-top: 3px;
-  font-size: 10.5px;
-  color: var(--coal-ink-ghost);
-}
-
-/* ============================ 热力块状表格 ============================ */
+/* ============================ 分层视图（热力格图） ============================ */
 
 .cssm-matrix-wrap {
   padding: 14px;
@@ -445,7 +353,7 @@
   display: flex;
   flex-direction: column;
   justify-content: center;
-  min-height: 46px;
+  min-height: 56px;
   padding: 5px 7px;
   border-right: 1px solid var(--rule-hair);
   border-bottom: 1px solid var(--rule-hair);
@@ -468,6 +376,12 @@
   font-weight: 600;
 }
 
+.cssm-mcell-hint {
+  font-size: 10px;
+  font-weight: 400;
+  color: var(--coal-ink-ghost);
+}
+
 .cssm-mcell.is-void {
   background: repeating-linear-gradient(
     45deg,
@@ -477,7 +391,7 @@
 }
 
 .cssm-mcell.is-total {
-  min-height: 34px;
+  min-height: 32px;
   background: var(--yard-inset);
   color: var(--coal-ink-soft);
   font-weight: 600;
@@ -496,11 +410,12 @@
   box-shadow: inset 0 0 0 2px var(--control-accent);
 }
 
+/* 未识别煤层：颜色之外再叠一层横向条纹纹理 */
 .cssm-mcell.is-unmarked {
   background-image: repeating-linear-gradient(
-    45deg,
-    rgba(255, 255, 255, 0.24) 0 6px,
-    transparent 6px 12px
+    0deg,
+    rgba(255, 255, 255, 0.22) 0 3px,
+    transparent 3px 6px
   );
 }
 
@@ -511,19 +426,11 @@
   text-overflow: ellipsis;
 }
 
-.cssm-mcell-h {
-  margin-top: 4px;
-  height: 3px;
-  border-radius: 2px;
-  background: rgba(255, 255, 255, 0.34);
-  overflow: hidden;
-}
-
-.cssm-mcell-h i {
-  display: block;
-  height: 100%;
-  background: currentColor;
-  opacity: 0.72;
+.cssm-mcell-num {
+  margin-top: 2px;
+  font-size: 10px;
+  opacity: 0.85;
+  white-space: nowrap;
 }
 
 /* ============================ 煤层检视面板 ============================ */
@@ -551,9 +458,9 @@
 
 .cssm-ins-chip.is-unmarked {
   background-image: repeating-linear-gradient(
-    45deg,
-    rgba(255, 255, 255, 0.3) 0 5px,
-    transparent 5px 10px
+    0deg,
+    rgba(255, 255, 255, 0.35) 0 3px,
+    transparent 3px 6px
   );
 }
 
@@ -577,10 +484,16 @@
 .cssm-ins-cell {
   padding: 9px 14px;
   border-bottom: 1px solid var(--rule-hair);
+  border-right: 1px solid var(--rule-hair);
 }
 
-.cssm-ins-cell:nth-child(odd) {
-  border-right: 1px solid var(--rule-hair);
+.cssm-ins-cell:nth-child(2n) {
+  border-right: none;
+}
+
+.cssm-ins-cell.is-wide {
+  grid-column: 1 / -1;
+  border-right: none;
 }
 
 .cssm-ins-k {
@@ -599,6 +512,14 @@
   font-size: 10.5px;
   font-weight: 500;
   color: var(--coal-ink-ghost);
+}
+
+/* 入厂登记编号较长，允许换行并略缩字号 */
+.cssm-ins-reg {
+  display: block;
+  font-size: 12px;
+  line-height: 1.45;
+  word-break: break-all;
 }
 
 .cssm-ins-quality {
@@ -696,7 +617,7 @@
   color: var(--coal-ink-faint);
 }
 
-/* ============================ 抽屉与弹窗内的密集排版 ============================ */
+/* ============================ 抽屉与弹窗 ============================ */
 
 .cssm-form-note {
   margin-bottom: 12px;
@@ -708,6 +629,40 @@
   font-size: 12px;
   line-height: 1.65;
   color: var(--coal-ink-soft);
+}
+
+.cssm-drawer-form {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 4px;
+}
+
+.cssm-drawer-form > div.is-wide {
+  grid-column: 1 / -1;
+}
+
+.cssm-drawer-form label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 12.5px;
+  color: var(--coal-ink-soft);
+}
+
+.cssm-drawer-h3 {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 16px 0 8px;
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.cssm-drawer-h3 span {
+  font-size: 11.5px;
+  font-weight: 400;
+  color: var(--coal-ink-faint);
 }
 
 .cssm-match {
@@ -756,20 +711,27 @@
   color: var(--unmarked-flare);
 }
 
-.cssm-convert {
-  margin-top: 10px;
-  padding: 10px 12px;
-  border: 1px dashed var(--rule-line);
-  border-radius: 6px;
-  background: var(--yard-inset);
-  font-size: 12px;
-  line-height: 1.8;
-  color: var(--coal-ink-soft);
+/* 被合并煤层所在行 */
+.cssm-row-absorbed > td {
+  background: #fff1f0;
 }
 
-.cssm-convert b {
-  font-weight: 650;
-  color: var(--coal-ink);
+/* 拆分表格中由系统锁定／联动的角度，与可输入的起始角度形成明确区分 */
+.cssm-locked-angle {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  color: var(--coal-ink-faint);
+}
+
+.cssm-locked-angle em {
+  font-style: normal;
+  font-size: 10px;
+  padding: 1px 4px;
+  border-radius: 3px;
+  background: var(--yard-inset);
+  color: var(--coal-ink-ghost);
+  white-space: nowrap;
 }
 
 .cssm-grid-2 {
@@ -777,24 +739,9 @@
   gap: 0 12px;
 }
 
-.cssm-stack-form {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.cssm-stack-form label {
-  font-size: 13px;
-  color: var(--coal-ink-soft);
-}
-
-.cssm-stack-form label + * {
-  margin-bottom: 8px;
-}
-
 /* ============================ 响应式 ============================ */
 
-@media (max-width: 1360px) {
+@media (max-width: 1500px) {
   .cssm-main {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -804,25 +751,29 @@
   }
 }
 
-@media (max-width: 1100px) {
-  .cssm-strip {
-    grid-template-columns: minmax(0, 1fr);
+@media (max-width: 1200px) {
+  .cssm-board {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .cssm-strip-figures {
-    padding-left: 0;
-    border-left: none;
-    border-top: 1px solid var(--rule-hair);
-    padding-top: 10px;
-    flex-wrap: wrap;
+  .cssm-board-cell.is-pair {
+    grid-column: 1 / -1;
   }
 
-  .cssm-figure:first-child {
-    padding-left: 0;
+  .cssm-stack-view {
+    flex-direction: column-reverse;
+  }
+
+  .cssm-locator {
+    width: 100%;
+  }
+
+  .cssm-drawer-form {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
-@media (max-width: 720px) {
+@media (max-width: 760px) {
   .cssm-root {
     padding: 16px 12px 24px;
   }
@@ -834,6 +785,26 @@
   .cssm-head-tools {
     align-items: flex-start;
     width: 100%;
+  }
+
+  .cssm-board,
+  .cssm-drawer-form {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .cssm-board-cell.is-pair {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .cssm-board-cell.is-pair > div + div {
+    padding-left: 0;
+    padding-top: 12px;
+    border-left: none;
+    border-top: 1px solid var(--rule-hair);
+  }
+
+  .cssm-match {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .cssm-ins-quality {

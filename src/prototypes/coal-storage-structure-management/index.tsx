@@ -8,17 +8,14 @@
  * - /src/themes/antd-new/DESIGN-SPEC.md
  * - /skills/third-party/interface-design/SKILL.md
  * - /skills/ui-ux-pro-max/SKILL.md
- * - 用户提供的煤场存煤结构管理业务描述
+ * - 用户提供的煤场存煤结构管理业务描述（圆形煤场 36 分区版）
  */
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  Alert,
   App,
   Button,
   ConfigProvider,
-  DatePicker,
   Form,
-  Input,
   InputNumber,
   Modal,
   Radio,
@@ -32,105 +29,77 @@ import {
 } from 'antd';
 import {
   AppstoreOutlined,
-  DatabaseOutlined,
   ExportOutlined,
   HistoryOutlined,
   ImportOutlined,
   InfoCircleOutlined,
   ProfileOutlined,
   ScanOutlined,
-  SlidersOutlined,
   TableOutlined,
 } from '@ant-design/icons';
 import zhCN from 'antd/locale/zh_CN';
 import dayjs from 'dayjs';
 import type { ColumnsType } from 'antd/es/table';
-import * as geo from './geometry';
 import {
   ARRIVAL_BATCHES,
   COAL_TYPES,
   DEFAULT_DENSITY,
+  DEFAULT_LABEL_KEY,
   INITIAL_AUDIT,
   INITIAL_MOVES,
-  INITIAL_OUTER_LEDGER,
   LABEL_FIELDS,
-  SURVEY_PERIOD,
   UNMARKED_COLOR,
   YARDS,
+  ZONE_CAPACITY,
   type AuditLog,
   type CoalZone,
-  type OuterLedgerEntry,
   type StockMove,
   coalTypeName,
   createZones,
   findBatch,
   fmt,
   nextRecordId,
+  shortRegNo,
 } from './data';
+import { compactFieldValue, fieldValue } from './labels';
 import {
-  computeZone,
-  manualInbound,
-  manualOutbound,
-  mergeWithNeighbour,
-  replaceLayer,
-  resizeLayer,
+  applyInbound,
+  applyMerge,
+  applyOutbound,
+  applySplit,
   applySurveyPlan,
+  computeZone,
+  deleteLayer,
+  replaceLayer,
+  resolveMergePair,
   type ComputedLayer,
   type ComputedZone,
+  type InboundPlanItem,
+  type SplitPreviewRow,
   type SurveyInput,
   type SurveyPlan,
 } from './model';
-import ZoneSection from './components/ZoneSection';
+import StackHeatmap from './components/StackHeatmap';
+import YardLocator from './components/YardLocator';
 import LayerMatrix from './components/LayerMatrix';
 import LayerInspector from './components/LayerInspector';
 import SurveyDrawer from './components/SurveyDrawer';
+import InboundDrawer from './components/InboundDrawer';
+import OutboundDrawer from './components/OutboundDrawer';
+import SplitLayerDrawer from './components/SplitLayerDrawer';
+import MergeLayerDrawer from './components/MergeLayerDrawer';
 import './style.css';
 
 const OPERATOR = '田略（燃料专责）';
 const nowText = () => dayjs().format('YYYY-MM-DD HH:mm');
 
-interface SurveyResult {
-  at: string;
-  inMass: number;
-  outMass: number;
-  autoMatched: boolean;
-  unmarked: number;
-}
+type ViewMode = 'stack' | 'matrix' | 'table';
 
-const SEED_SURVEY_RESULTS: Record<string, SurveyResult> = {
-  Y1: { at: '2026-08-10 07:40', inMass: 5270, outMass: 2040, autoMatched: true, unmarked: 0 },
-  Y2: { at: '2026-08-10 08:20', inMass: 1785, outMass: 0, autoMatched: false, unmarked: 1 },
-};
-
-const formatFieldValue = (layer: ComputedLayer, key: string): string => {
-  const r = layer.raw;
-  const q = r.quality;
-  switch (key) {
-    case 'batchNo':
-      return r.batchNo || '待标记';
-    case 'shipName':
-      return r.shipName || '待标记';
-    case 'voyage':
-      return r.voyage || '—';
-    case 'coalType':
-      return r.coalType ? coalTypeName(r.coalType) : '待标记';
-    case 'cv':
-      return q ? fmt(q.cv) : '待标记';
-    case 'sulfur':
-      return q ? q.sulfur.toFixed(2) : '待标记';
-    case 'ash':
-      return q ? q.ash.toFixed(1) : '待标记';
-    case 'volatile':
-      return q ? q.volatile.toFixed(1) : '待标记';
-    case 'moisture':
-      return q ? q.moisture.toFixed(1) : '待标记';
-    case 'volume':
-      return fmt(layer.volume);
-    case 'mass':
-      return fmt(layer.mass);
-    default:
-      return '';
-  }
+/** 图例右侧的读图说明随视图切换，解释各视图独有的量化编码 */
+const VIEW_NOTE: Record<ViewMode, string> = {
+  stack: '纵轴为真实标高，每个方块 10 cm；连续方块段数即煤层厚度，右轴为对应悬臂俯仰角度',
+  matrix: '行序自下而上，第 1 层贴地；格内直接给出该层的层厚与标高区间',
+  table: '每个分区表层在前，横向滚动查看煤质与起始 / 结束角度',
 };
 
 interface FlatRow {
@@ -140,19 +109,9 @@ interface FlatRow {
 }
 
 interface MarkFormValues {
-  batchNo?: string;
-  shipName?: string;
-  voyage?: string;
+  regNo?: string;
   coalType?: string;
   density?: number;
-}
-
-interface ManualFormValues {
-  time?: dayjs.Dayjs;
-  zoneId?: string;
-  batchNo?: string;
-  mass?: number;
-  note?: string;
 }
 
 const ComponentInner: React.FC = () => {
@@ -161,29 +120,22 @@ const ComponentInner: React.FC = () => {
   const [zones, setZones] = useState<CoalZone[]>(() => createZones());
   const [yardId, setYardId] = useState('Y1');
   const [density, setDensity] = useState(DEFAULT_DENSITY);
-  const [viewMode, setViewMode] = useState<'section' | 'matrix' | 'table'>('section');
-  const [labelKey, setLabelKey] = useState('batchNo');
+  const [viewMode, setViewMode] = useState<ViewMode>('stack');
+  const [labelKey, setLabelKey] = useState(DEFAULT_LABEL_KEY);
   const [selected, setSelected] = useState<{ zoneId: string; layerId: string } | null>(null);
 
   const [moves, setMoves] = useState<StockMove[]>(INITIAL_MOVES);
   const [audits, setAudits] = useState<AuditLog[]>(INITIAL_AUDIT);
-  const [ledger, setLedger] = useState<OuterLedgerEntry[]>(INITIAL_OUTER_LEDGER);
-  const [surveyResults, setSurveyResults] =
-    useState<Record<string, SurveyResult>>(SEED_SURVEY_RESULTS);
 
   const [surveyOpen, setSurveyOpen] = useState(false);
+  const [inboundOpen, setInboundOpen] = useState(false);
+  const [outboundOpen, setOutboundOpen] = useState(false);
+  const [splitOpen, setSplitOpen] = useState(false);
+  const [mergeOpen, setMergeOpen] = useState(false);
+  const [mergeDirection, setMergeDirection] = useState<'up' | 'down'>('up');
   const [markOpen, setMarkOpen] = useState(false);
-  const [resizeOpen, setResizeOpen] = useState(false);
-  const [manualOpen, setManualOpen] = useState(false);
-
-  const [markForm] = Form.useForm();
-  const [manualForm] = Form.useForm();
-  const [resizeMode, setResizeMode] = useState<'mass' | 'pitch'>('mass');
-  const [resizeValue, setResizeValue] = useState<number>(0);
-  const [manualType, setManualType] = useState<'in' | 'out' | 'set'>('in');
-  // 弹窗设为关闭即销毁，表单初值经 initialValues 传入，避免在未挂载时调用 setFieldsValue
   const [markInitial, setMarkInitial] = useState<MarkFormValues>({});
-  const [manualInitial, setManualInitial] = useState<ManualFormValues>({});
+  const [markForm] = Form.useForm();
 
   const yard = YARDS.find((y) => y.id === yardId)!;
 
@@ -203,27 +155,39 @@ const ComponentInner: React.FC = () => {
       : null;
 
   const totals = useMemo(() => {
-    const surveyVolume = computedZones.reduce((s, z) => s + z.raw.surveyVolume, 0);
-    const lastVolume = computedZones.reduce((s, z) => s + z.raw.lastSurveyVolume, 0);
+    const unmarkedZones = computedZones.filter((z) => z.unmarkedCount > 0);
     return {
-      surveyVolume,
-      lastVolume,
+      surveyVolume: computedZones.reduce((s, z) => s + z.raw.surveyVolume, 0),
+      lastVolume: computedZones.reduce((s, z) => s + z.raw.lastSurveyVolume, 0),
+      totalVolume: computedZones.reduce((s, z) => s + z.totalVolume, 0),
       totalMass: computedZones.reduce((s, z) => s + z.totalMass, 0),
-      unmarkedCount: computedZones.reduce((s, z) => s + z.unmarkedCount, 0),
+      capacity: computedZones.length * ZONE_CAPACITY,
+      unmarkedZones: unmarkedZones.length,
+      unmarkedVolume: unmarkedZones.reduce(
+        (s, z) => s + z.layers.filter((l) => l.raw.status === 'unmarked').reduce((a, l) => a + l.volume, 0),
+        0,
+      ),
+      unmarkedLayers: computedZones.reduce((s, z) => s + z.unmarkedCount, 0),
       unmarkedMass: computedZones.reduce((s, z) => s + z.unmarkedMass, 0),
-      capacity: computedZones.reduce((s, z) => s + z.capacity, 0),
-      maxAbsDelta: Math.max(1, ...computedZones.map((z) => Math.abs(z.delta))),
+      maxHeight: Math.max(0.01, ...computedZones.map((z) => z.stackHeight)),
+      loadedZones: computedZones.filter((z) => z.layers.length > 0).length,
     };
   }, [computedZones]);
 
   const labelMap = useMemo(() => {
-    const map = new Map<string, string>();
+    const compact = new Map<string, string>();
+    const full = new Map<string, string>();
     computedZones.forEach((z) =>
-      z.layers.forEach((l) => map.set(l.id, formatFieldValue(l, labelKey))),
+      z.layers.forEach((l) => {
+        compact.set(l.id, compactFieldValue(l, labelKey));
+        full.set(l.id, fieldValue(l, labelKey));
+      }),
     );
-    return map;
+    return { compact, full };
   }, [computedZones, labelKey]);
-  const labelOf = useCallback((id: string) => labelMap.get(id) ?? '', [labelMap]);
+
+  const compactLabelOf = useCallback((id: string) => labelMap.compact.get(id) ?? '', [labelMap]);
+  const fullLabelOf = useCallback((id: string) => labelMap.full.get(id) ?? '', [labelMap]);
 
   const legendTypes = useMemo(() => {
     const map = new Map<string, Set<number>>();
@@ -251,7 +215,15 @@ const ComponentInner: React.FC = () => {
   const pushAudit = useCallback(
     (target: string, action: string, before: string, after: string) =>
       setAudits((prev) => [
-        { id: nextRecordId('A'), time: nowText(), operator: OPERATOR, target, action, before, after },
+        {
+          id: nextRecordId('A'),
+          time: nowText(),
+          operator: OPERATOR,
+          target,
+          action,
+          before,
+          after,
+        },
         ...prev,
       ]),
     [],
@@ -263,85 +235,271 @@ const ComponentInner: React.FC = () => {
     [],
   );
 
-  /* ---------------------------- 盘煤比对 ---------------------------- */
-
-  const handleApplySurvey = (plan: SurveyPlan, input: SurveyInput) => {
-    const stackedAt = dayjs().format('YYYY-MM-DD');
-    const time = nowText();
-    const beforeVolume = totals.surveyVolume;
-    const afterVolume = plan.items.reduce((s, i) => s + i.newVolume, 0);
-
-    setZones((prev) => applySurveyPlan(prev, plan, input, stackedAt));
-
-    const newMoves: StockMove[] = [];
-    plan.items.forEach((item) => {
-      if (item.kind === 'none') return;
-      item.details.forEach((d) => {
-        newMoves.push({
-          id: nextRecordId('M'),
-          time,
-          type: item.kind === 'in' ? 'in' : 'out',
-          yardId,
-          zoneName: item.zoneName,
-          batchNo: d.batchNo,
-          coalTypeName: d.coalTypeName,
-          volume: d.volume,
-          mass: d.mass,
-          source: 'survey-auto',
-          note:
-            item.kind === 'in'
-              ? plan.autoMatched
-                ? `盘煤体积 +${fmt(item.delta)} m³，匹配密度 ${plan.matchDensity?.toFixed(
-                    3,
-                  )} t/m³ 合理，自动识别批次；新增煤层起始俯仰角 ${item.pitchFrom?.toFixed(
-                    1,
-                  )}° → ${item.pitchTo?.toFixed(1)}°`
-                : `盘煤体积 +${fmt(item.delta)} m³，匹配密度超出合理区间，生成待标记煤层`
-              : `盘煤体积 ${fmt(item.delta)} m³，按煤层顺序自上而下扣减`,
-        });
-      });
-    });
-    setMoves((prev) => [...newMoves, ...prev]);
-
-    setSurveyResults((prev) => ({
-      ...prev,
-      [yardId]: {
-        at: time,
-        inMass: plan.inMass,
-        outMass: plan.outMass,
-        autoMatched: plan.autoMatched,
-        unmarked: plan.newUnmarkedLayers,
-      },
-    }));
-
-    pushAudit(
-      `${yard.shortName} · 全场`,
-      '执行盘煤比对',
-      `盘煤体积 ${fmt(beforeVolume)} m³`,
-      `盘煤体积 ${fmt(afterVolume)} m³`,
-    );
-
-    setSurveyOpen(false);
-    setSelected(null);
-    if (plan.autoMatched) {
-      message.success(
-        `盘煤比对完成：新增体积按匹配密度 ${plan.matchDensity?.toFixed(3)} t/m³ 自动识别批次`,
-      );
-    } else {
-      message.warning(
-        `盘煤比对完成：新增体积生成 ${plan.newUnmarkedLayers} 个待标记煤层，请核对接卸台账后手动标记`,
-      );
+  const locateUnmarked = () => {
+    for (const z of computedZones) {
+      const layer = z.layers.find((l) => l.raw.status === 'unmarked');
+      if (layer) {
+        setSelected({ zoneId: z.id, layerId: layer.id });
+        return;
+      }
     }
+    message.info('当前煤场没有待人工标记的煤层');
   };
 
-  /* ---------------------------- 煤层标记 ---------------------------- */
+  const selectZoneTop = (zoneId: string) => {
+    const zone = computedZones.find((z) => z.id === zoneId);
+    const top = zone?.layers[zone.layers.length - 1];
+    if (top) setSelected({ zoneId, layerId: top.id });
+    else message.info(`${zone?.name ?? ''} 为空区，暂无煤层`);
+  };
+
+  /* ---------------------------- 操作：入库 ---------------------------- */
+
+  const commitInbound = (params: {
+    plan: InboundPlanItem[];
+    regNo: string;
+    density: number;
+    totalMass: number;
+    note: string;
+  }) => {
+    const stackedAt = dayjs().format('YYYY-MM-DD');
+    setZones((prev) => applyInbound(prev, params.plan, params.regNo, params.density, stackedAt));
+
+    const time = nowText();
+    setMoves((prev) => [
+      ...params.plan.map((item) => ({
+        id: nextRecordId('M'),
+        time,
+        type: 'in' as const,
+        yardId,
+        zoneName: item.zoneName,
+        regNo: params.regNo,
+        coalTypeName: params.regNo
+          ? coalTypeName(findBatch(params.regNo)?.coalType ?? '')
+          : '待标记',
+        volume: item.volume,
+        mass: item.mass,
+        source: 'manual' as const,
+        note: `${params.note || '人工入库'}：顶层新增煤层，俯仰夹角 ${item.pitchFrom.toFixed(
+          1,
+        )}° → ${item.pitchTo.toFixed(1)}°，堆高 ${item.heightFrom.toFixed(
+          2,
+        )} → ${item.heightTo.toFixed(2)} m`,
+      })),
+      ...prev,
+    ]);
+
+    pushAudit(
+      `${yard.shortName} · ${params.plan.map((p) => p.zoneName).join('、')}`,
+      '入库（顶层新增煤层）',
+      `${params.plan.length} 个分区`,
+      `合计 +${fmt(params.totalMass)} t / +${fmt(
+        params.plan.reduce((s, p) => s + p.volume, 0),
+      )} m³`,
+    );
+
+    setInboundOpen(false);
+    setSelected(null);
+    message.success(
+      `已在 ${params.plan.length} 个分区顶层新增煤层，合计 ${fmt(params.totalMass)} t`,
+    );
+  };
+
+  const handleInboundSubmit = (params: {
+    plan: InboundPlanItem[];
+    regNo: string;
+    density: number;
+    totalMass: number;
+    note: string;
+    needSurveyWarning: boolean;
+  }) => {
+    if (params.needSurveyWarning) {
+      modal.confirm({
+        title: '确认手动增加存煤？',
+        okText: '确认入库',
+        cancelText: '返回修改',
+        content: (
+          <div style={{ fontSize: 13, lineHeight: 1.75 }}>
+            此煤场体积通过盘煤仪获得，若手动增加，将影响实际存煤体积信息。
+            <div style={{ marginTop: 8, color: '#8b847b' }}>
+              涉及 {params.plan.length} 个已有盘煤体积的分区，合计入库{' '}
+              {fmt(params.totalMass)} t。
+            </div>
+          </div>
+        ),
+        onOk: () => commitInbound(params),
+      });
+      return;
+    }
+    commitInbound(params);
+  };
+
+  /* ---------------------------- 操作：出库 ---------------------------- */
+
+  const handleOutboundSubmit = ({
+    zoneId,
+    mass,
+    note,
+  }: {
+    zoneId: string;
+    mass: number;
+    note: string;
+  }) => {
+    const zone = computedZones.find((z) => z.id === zoneId);
+    if (!zone) return;
+    const result = applyOutbound(zones, zoneId, mass);
+    if (result.shortage > 0.01) {
+      message.error(`${zone.name} 现存煤量不足，尚缺 ${fmt(result.shortage)} t`);
+      return;
+    }
+    setZones(result.zones);
+
+    const time = nowText();
+    const seqOf = new Map(zone.layers.map((l) => [l.id, l.seq]));
+    setMoves((prev) => [
+      ...result.cuts.map((c, i) => ({
+        id: nextRecordId('M'),
+        time,
+        type: 'out' as const,
+        yardId,
+        zoneName: zone.name,
+        regNo: c.layer.regNo,
+        coalTypeName: c.layer.regNo ? coalTypeName(c.layer.coalType) : '待标记',
+        volume: c.volume,
+        mass: c.mass,
+        source: 'manual' as const,
+        note: `${note || '人工出库'}：按后进先出第 ${i + 1} 顺位，扣减第 ${
+          seqOf.get(c.layer.id) ?? '—'
+        } 层`,
+      })),
+      ...prev,
+    ]);
+
+    pushAudit(
+      `${yard.shortName} · ${zone.name}`,
+      '出库（后进先出扣减）',
+      `${fmt(zone.totalMass)} t`,
+      `${fmt(Math.max(0, zone.totalMass - mass))} t`,
+    );
+
+    setOutboundOpen(false);
+    setSelected(null);
+    message.success(`已按后进先出扣减 ${fmt(mass)} t，形成 ${result.cuts.length} 条出库明细`);
+  };
+
+  /* ---------------------------- 操作：分层拆分 ---------------------------- */
+
+  const handleSplitSubmit = (preview: SplitPreviewRow[]) => {
+    if (!selected || !selectedZone || !selectedLayer) return;
+    const stackedAt = dayjs().format('YYYY-MM-DD');
+    setZones((prev) =>
+      applySplit(
+        prev,
+        selected.zoneId,
+        selected.layerId,
+        preview,
+        selectedLayer.raw.density,
+        stackedAt,
+      ),
+    );
+    pushAudit(
+      `${yard.shortName} · ${selectedZone.name} · 第 ${selectedLayer.seq} 层`,
+      '分层拆分',
+      `1 层 · ${fmt(selectedLayer.volume)} m³`,
+      `${preview.length} 层 · ${preview.map((p) => fmt(p.volume)).join(' + ')} m³`,
+    );
+    pushMove({
+      type: 'adjust',
+      yardId,
+      zoneName: selectedZone.name,
+      regNo: selectedLayer.raw.regNo,
+      coalTypeName: selectedLayer.raw.coalType ? coalTypeName(selectedLayer.raw.coalType) : '待标记',
+      volume: selectedLayer.volume,
+      mass: selectedLayer.mass,
+      source: 'split',
+      note: `第 ${selectedLayer.seq} 层拆分为 ${preview.length} 层，各层俯仰夹角 ${preview
+        .map((p) => `${p.pitchStart.toFixed(1)}°~${p.pitchEnd.toFixed(1)}°`)
+        .join(' / ')}`,
+    });
+    setSplitOpen(false);
+    setSelected(null);
+    message.success(`煤层已拆分为 ${preview.length} 层，各层体积与煤量按俯仰夹角重算`);
+  };
+
+  /* ---------------------------- 操作：分层合并 ---------------------------- */
+
+  const openMerge = (direction: 'up' | 'down') => {
+    setMergeDirection(direction);
+    setMergeOpen(true);
+  };
+
+  const handleMergeSubmit = () => {
+    if (!selected || !selectedZone || !selectedLayer) return;
+    const pair = resolveMergePair(selectedZone, selected.layerId, mergeDirection);
+    if (!pair) return;
+    setZones((prev) => applyMerge(prev, selected.zoneId, selected.layerId, mergeDirection));
+    pushAudit(
+      `${yard.shortName} · ${selectedZone.name} · 第 ${pair.keep.seq} 层`,
+      mergeDirection === 'up' ? '分层合并 · 合并上层' : '分层合并 · 合并下层',
+      `第 ${pair.keep.seq} 层 ${fmt(pair.keep.volume)} m³ + 第 ${pair.absorbed.seq} 层 ${fmt(
+        pair.absorbed.volume,
+      )} m³`,
+      `合并为 1 层 ${fmt(pair.keep.volume + pair.absorbed.volume)} m³`,
+    );
+    pushMove({
+      type: 'adjust',
+      yardId,
+      zoneName: selectedZone.name,
+      regNo: pair.keep.raw.regNo,
+      coalTypeName: pair.keep.raw.coalType ? coalTypeName(pair.keep.raw.coalType) : '待标记',
+      volume: pair.absorbed.volume,
+      mass: pair.absorbed.mass,
+      source: 'merge',
+      note: `第 ${pair.absorbed.seq} 层并入第 ${pair.keep.seq} 层，保留第 ${pair.keep.seq} 层批次归属`,
+    });
+    setMergeOpen(false);
+    setSelected(null);
+    message.success('煤层已合并，分层俯仰夹角已重算');
+  };
+
+  /* ---------------------------- 操作：删除 ---------------------------- */
+
+  const handleDelete = () => {
+    if (!selected || !selectedZone || !selectedLayer) return;
+    modal.confirm({
+      title: '直接删除煤堆信息？',
+      okText: '确认直接删除',
+      cancelText: '取消',
+      okButtonProps: { danger: true },
+      content: (
+        <div style={{ fontSize: 13, lineHeight: 1.75 }}>
+          直接删除将不会形成出入库记录，确认直接删除煤堆信息？
+          <div style={{ marginTop: 8, color: '#8b847b' }}>
+            {selectedZone.name} · 第 {selectedLayer.seq} 层（表层）· {fmt(selectedLayer.volume)} m³
+            / {fmt(selectedLayer.mass)} t
+          </div>
+        </div>
+      ),
+      onOk: () => {
+        setZones((prev) => deleteLayer(prev, selected.zoneId, selected.layerId));
+        pushAudit(
+          `${yard.shortName} · ${selectedZone.name} · 第 ${selectedLayer.seq} 层`,
+          '直接删除煤层（不形成出入库记录）',
+          `${fmt(selectedLayer.volume)} m³ / ${fmt(selectedLayer.mass)} t`,
+          '已删除',
+        );
+        setSelected(null);
+        message.success('表层煤层已删除，未形成出入库记录');
+      },
+    });
+  };
+
+  /* ---------------------------- 操作：标记入厂批次 ---------------------------- */
 
   const openMark = () => {
     if (!selectedLayer) return;
     setMarkInitial({
-      batchNo: selectedLayer.raw.batchNo || undefined,
-      shipName: selectedLayer.raw.shipName,
-      voyage: selectedLayer.raw.voyage,
+      regNo: selectedLayer.raw.regNo || undefined,
       coalType: selectedLayer.raw.coalType || undefined,
       density: Number(selectedLayer.raw.density.toFixed(3)),
     });
@@ -351,17 +509,17 @@ const ComponentInner: React.FC = () => {
   const submitMark = async () => {
     const values = await markForm.validateFields();
     if (!selected || !selectedZone || !selectedLayer) return;
-    const batch = findBatch(values.batchNo);
+    const batch = findBatch(values.regNo);
     const before =
       selectedLayer.raw.status === 'unmarked'
         ? '待标记'
-        : `${selectedLayer.raw.batchNo} / ${coalTypeName(selectedLayer.raw.coalType)}`;
+        : `${shortRegNo(selectedLayer.raw.regNo)} / ${coalTypeName(selectedLayer.raw.coalType)}`;
 
     setZones((prev) =>
       replaceLayer(prev, selected.zoneId, selected.layerId, {
-        batchNo: values.batchNo,
-        shipName: values.shipName || batch?.shipName || '',
-        voyage: values.voyage || batch?.voyage || '—',
+        regNo: values.regNo,
+        shipName: batch?.shipName ?? '',
+        voyage: batch?.voyage ?? '—',
         coalType: values.coalType,
         quality: COAL_TYPES[values.coalType]?.quality ?? null,
         density: values.density,
@@ -375,228 +533,21 @@ const ComponentInner: React.FC = () => {
       type: 'adjust',
       yardId,
       zoneName: selectedZone.name,
-      batchNo: values.batchNo,
+      regNo: values.regNo,
       coalTypeName: coalTypeName(values.coalType),
       volume: selectedLayer.volume,
       mass: selectedLayer.volume * values.density,
       source: 'mark',
-      note: `第 ${selectedLayer.seq} 层标记存煤批次，煤量按 ${values.density} t/m³ 重算`,
+      note: `第 ${selectedLayer.seq} 层标记入厂批次，煤量按 ${values.density} t/m³ 重算`,
     });
     pushAudit(
       `${yard.shortName} · ${selectedZone.name} · 第 ${selectedLayer.seq} 层`,
-      '标记存煤批次',
+      '标记入厂批次',
       before,
-      `${values.batchNo} / ${coalTypeName(values.coalType)}`,
+      `${shortRegNo(values.regNo)} / ${coalTypeName(values.coalType)}`,
     );
     setMarkOpen(false);
-    message.success('煤层批次已标记，煤质已按该批次化验值带入');
-  };
-
-  /* ---------------------------- 煤量 / 角度调整 ---------------------------- */
-
-  const openResize = () => {
-    if (!selectedLayer) return;
-    setResizeMode('mass');
-    setResizeValue(Math.round(selectedLayer.mass));
-    setResizeOpen(true);
-  };
-
-  const resizePreview = useMemo(() => {
-    if (!selectedZone || !selectedLayer) return null;
-    const g = selectedZone.geometry;
-    const base = selectedLayer.bound.volumeBottom;
-    let volume: number;
-    if (resizeMode === 'mass') {
-      volume = resizeValue / selectedLayer.raw.density;
-    } else {
-      const h = geo.heightFromPitch(g, resizeValue);
-      volume = geo.stackVolume(g, Math.max(0, h)) - base;
-    }
-    volume = Math.max(0, volume);
-    const above = selectedZone.layers.find((l) => l.seq === selectedLayer.seq + 1);
-    const requested = volume - selectedLayer.volume;
-    // 向上层借用不得超过上层存量；缩小本层时差额全额归还上层
-    const borrowed = above ? Math.min(requested, above.volume) : 0;
-    const applied = above ? selectedLayer.volume + borrowed : volume;
-    const heightTop = geo.heightFromVolume(g, base + applied);
-    return {
-      volume: applied,
-      mass: applied * selectedLayer.raw.density,
-      heightTop,
-      pitchTop: geo.pitchFromHeight(g, heightTop),
-      borrowed,
-      capped: above ? requested > above.volume : false,
-    };
-  }, [resizeMode, resizeValue, selectedZone, selectedLayer]);
-
-  const submitResize = () => {
-    if (!selected || !selectedZone || !selectedLayer || !resizePreview) return;
-    if (resizePreview.volume <= 0.01) {
-      message.error('调整后的煤层体积必须大于 0');
-      return;
-    }
-    const before = `${fmt(selectedLayer.mass)} t / 层顶 ${selectedLayer.bound.pitchTop.toFixed(1)}°`;
-    const result = resizeLayer(zones, selected.zoneId, selected.layerId, resizePreview.volume);
-    setZones(result.zones);
-    pushMove({
-      type: 'adjust',
-      yardId,
-      zoneName: selectedZone.name,
-      batchNo: selectedLayer.raw.batchNo,
-      coalTypeName: selectedLayer.raw.coalType
-        ? coalTypeName(selectedLayer.raw.coalType)
-        : '待标记',
-      volume: Math.abs(result.applied - selectedLayer.volume),
-      mass: Math.abs(result.applied - selectedLayer.volume) * selectedLayer.raw.density,
-      source: 'manual',
-      note:
-        resizeMode === 'mass'
-          ? `按煤量调整第 ${selectedLayer.seq} 层，差额 ${fmt(result.borrowed)} m³ 与相邻上层借还`
-          : `按层顶俯仰角 ${resizeValue.toFixed(1)}° 调整第 ${selectedLayer.seq} 层，系统按几何关系反算煤量`,
-    });
-    pushAudit(
-      `${yard.shortName} · ${selectedZone.name} · 第 ${selectedLayer.seq} 层`,
-      resizeMode === 'mass' ? '调整煤量' : '调整起始俯仰角',
-      before,
-      `${fmt(resizePreview.mass)} t / 层顶 ${resizePreview.pitchTop.toFixed(1)}°`,
-    );
-    setResizeOpen(false);
-    message.success('煤层已按几何关系重算，上层分界俯仰角同步更新');
-  };
-
-  /* ---------------------------- 煤层合并 ---------------------------- */
-
-  const handleMerge = (direction: 'up' | 'down') => {
-    if (!selected || !selectedZone || !selectedLayer) return;
-    const other = selectedZone.layers.find(
-      (l) => l.seq === selectedLayer.seq + (direction === 'up' ? 1 : -1),
-    );
-    if (!other) return;
-    const differ = other.raw.batchNo !== selectedLayer.raw.batchNo;
-    modal.confirm({
-      title: `合并${direction === 'up' ? '上' : '下'}层煤层`,
-      content: differ
-        ? `第 ${other.seq} 层（${
-            other.raw.batchNo || '待标记'
-          }）将并入第 ${selectedLayer.seq} 层，合并后统一归属 ${
-            selectedLayer.raw.batchNo || '待标记'
-          } 批次，密度按体积加权重算。`
-        : `第 ${other.seq} 层与第 ${selectedLayer.seq} 层为同一批次，合并后体积 ${fmt(
-            selectedLayer.volume + other.volume,
-          )} m³。`,
-      okText: '确认合并',
-      cancelText: '取消',
-      onOk: () => {
-        setZones((prev) => mergeWithNeighbour(prev, selected.zoneId, selected.layerId, direction));
-        pushAudit(
-          `${yard.shortName} · ${selectedZone.name} · 第 ${selectedLayer.seq} 层`,
-          '合并相邻煤层',
-          `${fmt(selectedLayer.volume)} m³（第 ${selectedLayer.seq} 层）`,
-          `${fmt(selectedLayer.volume + other.volume)} m³（并入第 ${other.seq} 层）`,
-        );
-        message.success('煤层已合并，分层分界俯仰角已重算');
-      },
-    });
-  };
-
-  /* ---------------------------- 厂外煤场手动维护 ---------------------------- */
-
-  const outerZones = computedZones;
-
-  const openManual = (type: 'in' | 'out' | 'set') => {
-    setManualType(type);
-    setManualInitial({
-      time: dayjs(),
-      zoneId: outerZones[0]?.id,
-      batchNo: undefined,
-      mass: type === 'set' ? Math.round(outerZones[0]?.totalMass ?? 0) : 1000,
-      note: '',
-    });
-    setManualOpen(true);
-  };
-
-  const submitManual = async () => {
-    const values = await manualForm.validateFields();
-    const zone = computedZones.find((z) => z.id === values.zoneId);
-    if (!zone) return;
-    const time = dayjs(values.time).format('YYYY-MM-DD HH:mm');
-    const stackedAt = dayjs(values.time).format('YYYY-MM-DD');
-    const batchNo: string = values.batchNo ?? '';
-    const typeName = manualType === 'in' ? '入库' : manualType === 'out' ? '出库' : '库存调整';
-
-    let deltaMass = values.mass as number;
-    let effective: 'in' | 'out' = manualType === 'out' ? 'out' : 'in';
-    if (manualType === 'set') {
-      deltaMass = (values.mass as number) - zone.totalMass;
-      effective = deltaMass >= 0 ? 'in' : 'out';
-      deltaMass = Math.abs(deltaMass);
-      if (deltaMass < 0.5) {
-        message.info('目标库存与当前库存一致，无需调整');
-        setManualOpen(false);
-        return;
-      }
-    }
-
-    if (effective === 'in') {
-      setZones((prev) =>
-        manualInbound(prev, zone.id, {
-          batchNo,
-          mass: deltaMass,
-          density: yard.density,
-          stackedAt,
-        }),
-      );
-    } else {
-      const result = manualOutbound(zones, zone.id, deltaMass);
-      if (result.shortage > 0.5) {
-        message.error(
-          `${zone.name} 现存煤量不足，尚缺 ${fmt(result.shortage)} t，请核对后重新登记`,
-        );
-        return;
-      }
-      setZones(result.zones);
-    }
-
-    const entry: OuterLedgerEntry = {
-      id: nextRecordId('O'),
-      time,
-      type: manualType === 'set' ? 'adjust' : manualType,
-      zoneName: zone.name,
-      batchNo,
-      coalTypeName: batchNo ? coalTypeName(findBatch(batchNo)?.coalType ?? '') : '待标记',
-      mass: deltaMass,
-      operator: OPERATOR,
-      note: values.note || `${typeName}登记，已回写至数字化煤场煤堆分层结构`,
-    };
-    setLedger((prev) => [entry, ...prev]);
-
-    pushMove({
-      type: manualType === 'set' ? 'adjust' : manualType,
-      yardId,
-      zoneName: zone.name,
-      batchNo,
-      coalTypeName: entry.coalTypeName,
-      volume: deltaMass / yard.density,
-      mass: deltaMass,
-      source: 'manual',
-      note:
-        manualType === 'set'
-          ? `手动调整库存至 ${fmt(values.mass)} t，差额 ${
-              effective === 'in' ? '+' : '-'
-            }${fmt(deltaMass)} t 已回写煤堆`
-          : `${typeName}登记 ${fmt(deltaMass)} t，已按${
-              effective === 'in' ? '堆煤顺序堆至顶层' : '取煤顺序自上而下扣减'
-            }`,
-    });
-    pushAudit(
-      `${yard.shortName} · ${zone.name}`,
-      `手动${typeName}`,
-      `${fmt(zone.totalMass)} t`,
-      `${fmt(effective === 'in' ? zone.totalMass + deltaMass : zone.totalMass - deltaMass)} t`,
-    );
-
-    setManualOpen(false);
-    message.success(`${typeName}已登记，结构调整已同步至数字化煤场煤堆`);
+    message.success('煤层入厂批次已标记，煤质已按该批次化验值带入');
   };
 
   /* ---------------------------- 视图数据 ---------------------------- */
@@ -604,30 +555,32 @@ const ComponentInner: React.FC = () => {
   const flatRows: FlatRow[] = useMemo(() => {
     const rows: FlatRow[] = [];
     computedZones.forEach((z) =>
-      [...z.layers].reverse().forEach((l) => rows.push({ key: `${z.id}-${l.id}`, zone: z, layer: l })),
+      [...z.layers]
+        .reverse()
+        .forEach((l) => rows.push({ key: `${z.id}-${l.id}`, zone: z, layer: l })),
     );
     return rows;
   }, [computedZones]);
 
   const detailColumns: ColumnsType<FlatRow> = [
-    { title: '分区', key: 'zone', width: 68, fixed: 'left', render: (_, r) => r.zone.name },
+    { title: '分区', key: 'zone', width: 66, fixed: 'left', render: (_, r) => r.zone.name },
     {
       title: '层序',
       key: 'seq',
-      width: 62,
+      width: 92,
       render: (_, r) => (
         <span className="cssm-num">
-          第 {r.layer.seq} 层{r.layer.seq === r.zone.layers.length ? '（顶）' : ''}
+          第 {r.layer.seq} 层{r.layer.seq === r.zone.layers.length ? '（表层）' : ''}
         </span>
       ),
     },
     {
       title: '状态',
       key: 'status',
-      width: 86,
+      width: 84,
       render: (_, r) =>
         r.layer.raw.status === 'unmarked' ? (
-          <Tag color="volcano" style={{ marginInlineEnd: 0 }}>
+          <Tag color="red" style={{ marginInlineEnd: 0 }}>
             待标记
           </Tag>
         ) : (
@@ -636,11 +589,16 @@ const ComponentInner: React.FC = () => {
           </Tag>
         ),
     },
-    { title: '批次', key: 'batch', width: 118, render: (_, r) => r.layer.raw.batchNo || '—' },
+    {
+      title: '入厂登记编号',
+      key: 'reg',
+      width: 246,
+      render: (_, r) => r.layer.raw.regNo || '—',
+    },
     { title: '船名', key: 'ship', width: 148, render: (_, r) => r.layer.raw.shipName || '—' },
     { title: '航次', key: 'voyage', width: 72, render: (_, r) => r.layer.raw.voyage || '—' },
     {
-      title: '煤种',
+      title: '库存煤种',
       key: 'coalType',
       width: 100,
       render: (_, r) => (r.layer.raw.coalType ? coalTypeName(r.layer.raw.coalType) : '—'),
@@ -667,24 +625,31 @@ const ComponentInner: React.FC = () => {
       render: (_, r) => <span className="cssm-num">{r.layer.raw.density.toFixed(3)}</span>,
     },
     {
-      title: '标高区间 m',
-      key: 'height',
-      width: 118,
+      title: '层厚 m',
+      key: 'thickness',
+      width: 88,
       align: 'right',
-      render: (_, r) => (
-        <span className="cssm-num">
-          {r.layer.bound.heightBottom.toFixed(1)} ~ {r.layer.bound.heightTop.toFixed(1)}
-        </span>
-      ),
+      render: (_, r) => <span className="cssm-num">{r.layer.thickness.toFixed(2)}</span>,
     },
     {
-      title: '分界俯仰角',
-      key: 'pitch',
+      title: '标高区间 m',
+      key: 'height',
       width: 128,
       align: 'right',
       render: (_, r) => (
         <span className="cssm-num">
-          {r.layer.bound.pitchBottom.toFixed(1)}° ~ {r.layer.bound.pitchTop.toFixed(1)}°
+          {r.layer.bound.heightBottom.toFixed(2)} ~ {r.layer.bound.heightTop.toFixed(2)}
+        </span>
+      ),
+    },
+    {
+      title: '起始 / 结束角度',
+      key: 'pitch',
+      width: 142,
+      align: 'right',
+      render: (_, r) => (
+        <span className="cssm-num">
+          {r.layer.bound.pitchBottom.toFixed(2)}° ~ {r.layer.bound.pitchTop.toFixed(2)}°
         </span>
       ),
     },
@@ -746,8 +711,13 @@ const ComponentInner: React.FC = () => {
   const moveColumns: ColumnsType<StockMove> = [
     { title: '时间', dataIndex: 'time', width: 132 },
     { title: '分区', dataIndex: 'zoneName', width: 72 },
-    { title: '批次', key: 'batch', width: 118, render: (_, r) => r.batchNo || '待标记' },
-    { title: '煤种', dataIndex: 'coalTypeName', width: 96 },
+    {
+      title: '入厂登记编号',
+      key: 'reg',
+      width: 246,
+      render: (_, r) => r.regNo || <span style={{ color: UNMARKED_COLOR }}>待标记</span>,
+    },
+    { title: '库存煤种', dataIndex: 'coalTypeName', width: 100 },
     {
       title: '体积 m³',
       dataIndex: 'volume',
@@ -765,15 +735,22 @@ const ComponentInner: React.FC = () => {
     {
       title: '来源',
       dataIndex: 'source',
-      width: 104,
-      render: (v: StockMove['source']) => (
-        <Tag
-          color={v === 'survey-auto' ? 'cyan' : v === 'mark' ? 'blue' : 'gold'}
-          style={{ marginInlineEnd: 0 }}
-        >
-          {v === 'survey-auto' ? '盘煤自动' : v === 'mark' ? '批次标记' : '人工维护'}
-        </Tag>
-      ),
+      width: 108,
+      render: (v: StockMove['source']) => {
+        const meta: Record<StockMove['source'], { color: string; label: string }> = {
+          'survey-auto': { color: 'cyan', label: '盘煤自动' },
+          manual: { color: 'gold', label: '人工出入库' },
+          mark: { color: 'blue', label: '批次标记' },
+          split: { color: 'purple', label: '分层拆分' },
+          merge: { color: 'geekblue', label: '分层合并' },
+          delete: { color: 'red', label: '直接删除' },
+        };
+        return (
+          <Tag color={meta[v].color} style={{ marginInlineEnd: 0 }}>
+            {meta[v].label}
+          </Tag>
+        );
+      },
     },
     { title: '说明', dataIndex: 'note', ellipsis: true },
   ];
@@ -781,55 +758,14 @@ const ComponentInner: React.FC = () => {
   const auditColumns: ColumnsType<AuditLog> = [
     { title: '时间', dataIndex: 'time', width: 132 },
     { title: '操作人', dataIndex: 'operator', width: 150 },
-    { title: '对象', dataIndex: 'target', width: 230 },
-    { title: '动作', dataIndex: 'action', width: 130 },
-    { title: '调整前', dataIndex: 'before', width: 200 },
+    { title: '对象', dataIndex: 'target', width: 250 },
+    { title: '动作', dataIndex: 'action', width: 190 },
+    { title: '调整前', dataIndex: 'before', width: 240 },
     { title: '调整后', dataIndex: 'after' },
   ];
 
-  const ledgerColumns: ColumnsType<OuterLedgerEntry> = [
-    { title: '时间', dataIndex: 'time', width: 132 },
-    {
-      title: '类型',
-      dataIndex: 'type',
-      width: 84,
-      render: (v: OuterLedgerEntry['type']) => (
-        <Tag
-          color={v === 'in' ? 'cyan' : v === 'out' ? 'gold' : 'blue'}
-          style={{ marginInlineEnd: 0 }}
-        >
-          {v === 'in' ? '入库' : v === 'out' ? '出库' : '库存调整'}
-        </Tag>
-      ),
-    },
-    { title: '分区', dataIndex: 'zoneName', width: 72 },
-    { title: '来煤批次', key: 'batch', width: 118, render: (_, r) => r.batchNo || '待标记' },
-    { title: '煤种', dataIndex: 'coalTypeName', width: 96 },
-    {
-      title: '煤量 t',
-      dataIndex: 'mass',
-      width: 96,
-      align: 'right',
-      render: (v: number) => <span className="cssm-num">{fmt(v)}</span>,
-    },
-    { title: '登记人', dataIndex: 'operator', width: 150 },
-    { title: '备注', dataIndex: 'note', ellipsis: true },
-  ];
-
   const yardMoves = moves.filter((m) => m.yardId === yardId);
-  const result = surveyResults[yardId];
   const activeField = LABEL_FIELDS.find((f) => f.key === labelKey)!;
-
-  const locateUnmarked = () => {
-    for (const z of computedZones) {
-      const layer = z.layers.find((l) => l.raw.status === 'unmarked');
-      if (layer) {
-        setSelected({ zoneId: z.id, layerId: layer.id });
-        return;
-      }
-    }
-    message.info('当前煤场没有待标记煤层');
-  };
 
   /* ---------------------------- 渲染 ---------------------------- */
 
@@ -839,22 +775,26 @@ const ComponentInner: React.FC = () => {
         <div>
           <h1>煤场存煤结构管理</h1>
           <p>
-            按煤场 → 分区 → 分层维护存煤结构。以激光盘煤体积为煤量上限，依直扇形楔几何关系计算各
-            分层体积与估算煤量，并反算煤层分界的臂架俯仰角；盘煤体积变动时自动匹配接卸批次或生成
-            待标记煤层。
+            单一煤场视角，按分区 → 分层维护圆形煤场存煤结构。以激光盘煤体积为煤量上限，依扇形楔
+            几何关系计算各分层体积与估算煤量，并反算煤层分界的悬臂俯仰角。
           </p>
         </div>
         <div className="cssm-head-tools">
           <div className="cssm-head-row">
-            <Segmented
+            <span className="cssm-meta">煤场</span>
+            <Select
+              style={{ width: 260 }}
               value={yardId}
-              onChange={(v) => setYardId(v as string)}
-              options={YARDS.map((y) => ({ label: y.shortName, value: y.id }))}
+              onChange={(v) => setYardId(v)}
+              options={YARDS.map((y) => ({
+                value: y.id,
+                label: `${y.shortName}（${y.zoneCount} 分区${y.hasSurvey ? '' : ' · 无盘煤'}）`,
+              }))}
             />
           </div>
           <div className="cssm-head-row">
             <span className="cssm-meta">
-              默认燃煤密度
+              默认计算密度
               <InputNumber
                 size="small"
                 min={0.6}
@@ -867,164 +807,91 @@ const ComponentInner: React.FC = () => {
               />
             </span>
             {yard.hasSurvey ? (
-              <Button type="primary" icon={<ScanOutlined />} onClick={() => setSurveyOpen(true)}>
+              <Button icon={<ScanOutlined />} onClick={() => setSurveyOpen(true)}>
                 盘煤比对
               </Button>
             ) : (
-              <Tooltip title="厂外煤场无激光盘煤数据源">
+              <Tooltip title="该煤场无激光盘煤数据源，库存以人工出入库维护">
                 <Button icon={<ScanOutlined />} disabled>
                   盘煤比对
                 </Button>
               </Tooltip>
             )}
-            {yard.hasSurvey ? (
-              <Tooltip title="厂内煤场以盘煤体积为准，库存变动请通过盘煤比对或煤层调整完成">
-                <Button icon={<DatabaseOutlined />} disabled>
-                  手动维护库存
-                </Button>
-              </Tooltip>
-            ) : (
-              <Button
-                type="primary"
-                icon={<DatabaseOutlined />}
-                onClick={() => openManual('in')}
-              >
-                手动维护库存
-              </Button>
-            )}
-          </div>
-          <div className="cssm-meta">
-            {yard.hasSurvey ? (
-              <>
-                上次盘煤 <b>{yard.lastSurveyAt}</b> · 盘煤周期 <b>{SURVEY_PERIOD.from}</b> ~{' '}
-                <b>{SURVEY_PERIOD.to}</b>
-              </>
-            ) : (
-              <>
-                无盘煤数据源 · 库存由手动台账维护 · 密度 <b>{yard.density} t/m³</b>
-              </>
-            )}
           </div>
         </div>
       </header>
 
-      {/* 盘煤差量条：替代常规 KPI 卡片，直接呈现体积变动与自动出入库判定 */}
-      <section className={`cssm-strip${yard.hasSurvey ? '' : ' is-manual'}`}>
-        <div>
-          <div className="cssm-strip-hd">
-            <h2>{yard.hasSurvey ? '分区盘煤体积变动' : '分区库存分布'}</h2>
-            <span>
-              {yard.hasSurvey
-                ? '柱向上为体积增加（待匹配入库），向下为体积减少（自上而下扣减出库）；点击可定位该分区顶层'
-                : '厂外煤场按手动台账维护，调整结果自动回写至数字化煤场煤堆分层结构；点击可定位该分区顶层'}
-            </span>
-          </div>
-          <div className="cssm-delta">
-            {computedZones.map((z) => {
-              const ratio = Math.abs(z.delta) / totals.maxAbsDelta;
-              const h = Math.abs(z.delta) < 0.5 ? 0 : Math.max(3, ratio * 20);
-              return (
-                <div
-                  key={z.id}
-                  className="cssm-delta-item"
-                  role="button"
-                  tabIndex={0}
-                  aria-label={`${z.name}，体积变动 ${Math.round(z.delta)} 立方米`}
-                  onClick={() => {
-                    const top = z.layers[z.layers.length - 1];
-                    if (top) setSelected({ zoneId: z.id, layerId: top.id });
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      const top = z.layers[z.layers.length - 1];
-                      if (top) setSelected({ zoneId: z.id, layerId: top.id });
-                    }
-                  }}
-                >
-                  <div className="cssm-delta-up">
-                    {z.delta > 0.5 && <span className="cssm-delta-bar" style={{ height: h }} />}
-                  </div>
-                  <div className="cssm-delta-axis" />
-                  <div className="cssm-delta-down">
-                    {z.delta < -0.5 && <span className="cssm-delta-bar" style={{ height: h }} />}
-                  </div>
-                  <span className="cssm-delta-code">{z.code}</span>
-                  <span className="cssm-delta-val cssm-num">
-                    {Math.abs(z.delta) < 0.5 ? '—' : `${z.delta > 0 ? '+' : ''}${fmt(z.delta)}`}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        <div className="cssm-strip-figures">
-          <div className="cssm-figure">
-            <div className="cssm-figure-k">{yard.hasSurvey ? '本次盘煤体积' : '台账库存体积'}</div>
+      {/* 煤场库存统计看板 */}
+      <section className="cssm-board">
+        <div className="cssm-board-cell is-pair">
+          <div>
+            <div className="cssm-figure-k">总体积</div>
             <div className="cssm-figure-v cssm-num">
               {fmt(totals.surveyVolume)}
               <em>m³</em>
             </div>
-            <div className="cssm-figure-sub">
-              {yard.hasSurvey ? `上次 ${fmt(totals.lastVolume)} m³` : `几何容量 ${fmt(totals.capacity)} m³`}
-            </div>
+            <div className="cssm-figure-sub">盘煤时间 {yard.surveyAt}</div>
           </div>
-          <div className="cssm-figure">
-            <div className="cssm-figure-k">存煤煤量</div>
-            <div className="cssm-figure-v cssm-num">
-              {fmt(totals.totalMass)}
-              <em>t</em>
+          <div>
+            <div className="cssm-figure-k">上次盘煤体积</div>
+            <div className="cssm-figure-v cssm-num is-muted">
+              {fmt(totals.lastVolume)}
+              <em>m³</em>
             </div>
-            <div className="cssm-figure-sub">
-              可取煤量，占几何容量 {((totals.surveyVolume / totals.capacity) * 100).toFixed(1)}%
-            </div>
+            <div className="cssm-figure-sub">盘煤时间 {yard.lastSurveyAt}</div>
           </div>
-          <div className="cssm-figure">
-            <div className="cssm-figure-k">{yard.hasSurvey ? '自动入库' : '台账入库'}</div>
-            <div className="cssm-figure-v cssm-num is-scan">
-              {fmt(
-                yard.hasSurvey
-                  ? result?.inMass ?? 0
-                  : ledger.filter((l) => l.type === 'in').reduce((s, l) => s + l.mass, 0),
-              )}
-              <em>t</em>
-            </div>
-            <div className="cssm-figure-sub">
-              {yard.hasSurvey ? result?.at ?? '—' : `${ledger.filter((l) => l.type === 'in').length} 笔登记`}
-            </div>
+          <div className="cssm-board-delta">
+            {(() => {
+              const d = totals.surveyVolume - totals.lastVolume;
+              if (Math.abs(d) < 0.5) return <span className="cssm-figure-sub">两次盘煤无变动</span>;
+              return (
+                <span className={d > 0 ? 'is-scan' : 'is-draw'}>
+                  {d > 0 ? '↑' : '↓'} {fmt(Math.abs(d))} m³
+                </span>
+              );
+            })()}
           </div>
-          <div className="cssm-figure">
-            <div className="cssm-figure-k">{yard.hasSurvey ? '自动出库' : '台账出库'}</div>
-            <div className="cssm-figure-v cssm-num is-draw">
-              {fmt(
-                yard.hasSurvey
-                  ? result?.outMass ?? 0
-                  : ledger.filter((l) => l.type === 'out').reduce((s, l) => s + l.mass, 0),
-              )}
-              <em>t</em>
-            </div>
-            <div className="cssm-figure-sub">
-              {yard.hasSurvey ? '自上而下逐层扣减' : '自上而下逐层扣减'}
-            </div>
+        </div>
+
+        <div className="cssm-board-cell">
+          <div className="cssm-figure-k">存煤量</div>
+          <div className="cssm-figure-v cssm-num">
+            {fmt(totals.totalMass)}
+            <em>t</em>
           </div>
-          <div className="cssm-figure">
-            <div className="cssm-figure-k">待标记煤层</div>
-            <div
-              className={`cssm-figure-v cssm-num${totals.unmarkedCount > 0 ? ' is-flare' : ''}`}
-            >
-              {totals.unmarkedCount}
-              <em>层</em>
-            </div>
-            <div className="cssm-figure-sub">
-              {totals.unmarkedCount > 0 ? (
-                <a onClick={locateUnmarked} style={{ cursor: 'pointer' }}>
-                  {fmt(totals.unmarkedMass)} t 待确认 · 定位
-                </a>
-              ) : (
-                '批次归属完整'
-              )}
-            </div>
+          <div className="cssm-figure-sub">
+            默认计算密度 {density} t/m³ · 占几何容量{' '}
+            {((totals.totalVolume / totals.capacity) * 100).toFixed(1)}%
+          </div>
+        </div>
+
+        <div className="cssm-board-cell">
+          <div className="cssm-figure-k">未识别煤堆</div>
+          <div className={`cssm-figure-v cssm-num${totals.unmarkedZones > 0 ? ' is-flare' : ''}`}>
+            {totals.unmarkedZones}
+            <em>个分区</em>
+          </div>
+          <div className="cssm-figure-sub">
+            {totals.unmarkedZones > 0
+              ? `存在实际体积 ${fmt(totals.unmarkedVolume)} m³`
+              : '全部煤堆批次归属完整'}
+          </div>
+        </div>
+
+        <div className="cssm-board-cell">
+          <div className="cssm-figure-k">待人工标记数量</div>
+          <div className={`cssm-figure-v cssm-num${totals.unmarkedLayers > 0 ? ' is-flare' : ''}`}>
+            {totals.unmarkedLayers}
+            <em>层</em>
+          </div>
+          <div className="cssm-figure-sub">
+            {totals.unmarkedLayers > 0 ? (
+              <a onClick={locateUnmarked} style={{ cursor: 'pointer' }}>
+                估算 {fmt(totals.unmarkedMass)} t 待确认 · 定位
+              </a>
+            ) : (
+              '无待标记煤层'
+            )}
           </div>
         </div>
       </section>
@@ -1032,21 +899,29 @@ const ComponentInner: React.FC = () => {
       <div className="cssm-main">
         <section className="cssm-panel">
           <div className="cssm-panel-hd">
-            <h2>{yard.name} · 存煤结构</h2>
-            <Segmented
-              size="small"
-              value={viewMode}
-              onChange={(v) => setViewMode(v as typeof viewMode)}
-              options={[
-                { label: '剖面结构', value: 'section', icon: <AppstoreOutlined /> },
-                { label: '热力格图', value: 'matrix', icon: <ProfileOutlined /> },
-                { label: '分层明细', value: 'table', icon: <TableOutlined /> },
-              ]}
-            />
+            <h2>存煤结构维护 · {yard.name}</h2>
+            <Space size={8} wrap>
+              <Button type="primary" icon={<ImportOutlined />} onClick={() => setInboundOpen(true)}>
+                入库
+              </Button>
+              <Button icon={<ExportOutlined />} onClick={() => setOutboundOpen(true)}>
+                出库
+              </Button>
+              <Segmented
+                size="small"
+                value={viewMode}
+                onChange={(v) => setViewMode(v as ViewMode)}
+                options={[
+                  { label: '实际堆煤视图', value: 'stack', icon: <AppstoreOutlined /> },
+                  { label: '分层视图', value: 'matrix', icon: <ProfileOutlined /> },
+                  { label: '分层数据', value: 'table', icon: <TableOutlined /> },
+                ]}
+              />
+            </Space>
           </div>
 
           <div className="cssm-fieldbar">
-            <span className="cssm-fieldbar-label">缩略展示参数</span>
+            <span className="cssm-fieldbar-label">存煤视图展示信息</span>
             <Radio.Group
               size="small"
               optionType="button"
@@ -1062,7 +937,7 @@ const ComponentInner: React.FC = () => {
           </div>
 
           <div className="cssm-legend">
-            <span className="cssm-fieldbar-label">色族 = 煤种，色阶 = 批次</span>
+            <span className="cssm-fieldbar-label">色族 = 库存煤种，色阶 = 入厂登记编号</span>
             {legendTypes.map((t) => (
               <span key={t.key} className="cssm-legend-group">
                 <span className="cssm-legend-ramp">
@@ -1079,75 +954,38 @@ const ComponentInner: React.FC = () => {
                   style={{
                     background: UNMARKED_COLOR,
                     backgroundImage:
-                      'repeating-linear-gradient(45deg, rgba(255,255,255,.5) 0 3px, transparent 3px 6px)',
+                      'repeating-linear-gradient(0deg, rgba(255,255,255,.45) 0 2px, transparent 2px 4px)',
                   }}
                 />
               </span>
-              待标记批次
+              待标记（异常）
             </span>
-            <span className="cssm-legend-note">
-              灰柱 = 挡煤墙 19 m · 橙色虚线 = 允许最大堆高 18 m · 右侧数值 = 分界俯仰角
-            </span>
+            <span className="cssm-legend-note">{VIEW_NOTE[viewMode]}</span>
           </div>
 
-          {viewMode === 'section' && (
-            <div className="cssm-sections">
-              {computedZones.map((z) => (
-                <div
-                  key={z.id}
-                  className={`cssm-zone${selected?.zoneId === z.id ? ' is-active' : ''}`}
-                >
-                  <ZoneSection
-                    zone={z}
-                    labelOf={labelOf}
-                    selectedLayerId={selected?.layerId ?? null}
-                    onSelect={(zoneId, layerId) => setSelected({ zoneId, layerId })}
-                  />
-                  <div className="cssm-zone-foot">
-                    <div className="cssm-zone-name">
-                      {z.name}
-                      <em className="cssm-num">{z.layers.length} 层</em>
-                    </div>
-                    {z.layers.length === 0 ? (
-                      <div className="cssm-zone-empty">无存煤，可接收新批次</div>
-                    ) : (
-                      <>
-                        <div className="cssm-zone-kv">
-                          <span>堆高</span>
-                          <span className="cssm-num">{z.stackHeight.toFixed(1)} m</span>
-                        </div>
-                        <div className="cssm-zone-kv">
-                          <span>盘煤体积</span>
-                          <span className="cssm-num">{fmt(z.raw.surveyVolume)} m³</span>
-                        </div>
-                        <div className="cssm-zone-kv">
-                          <span>存煤煤量</span>
-                          <span className="cssm-num">{fmt(z.totalMass)} t</span>
-                        </div>
-                        {z.unallocated > 1 && (
-                          <div className="cssm-zone-kv" style={{ color: '#b8790a' }}>
-                            <span>未分配体积</span>
-                            <span className="cssm-num">{fmt(z.unallocated)} m³</span>
-                          </div>
-                        )}
-                        {z.unmarkedCount > 0 && (
-                          <div className="cssm-zone-kv" style={{ color: UNMARKED_COLOR }}>
-                            <span>待标记</span>
-                            <span className="cssm-num">{z.unmarkedCount} 层</span>
-                          </div>
-                        )}
-                      </>
-                    )}
-                  </div>
-                </div>
-              ))}
+          {viewMode === 'stack' && (
+            <div className="cssm-stack-view">
+              <YardLocator
+                zones={computedZones}
+                maxHeight={computedZones[0]?.geometry.maxStackHeight ?? 20}
+                selectedZoneId={selected?.zoneId ?? null}
+                onSelect={selectZoneTop}
+              />
+              <StackHeatmap
+                zones={computedZones}
+                labelOf={compactLabelOf}
+                tipOf={fullLabelOf}
+                selectedLayerId={selected?.layerId ?? null}
+                onSelect={(zoneId, layerId) => setSelected({ zoneId, layerId })}
+              />
             </div>
           )}
 
           {viewMode === 'matrix' && (
             <LayerMatrix
               zones={computedZones}
-              labelOf={labelOf}
+              labelOf={fullLabelOf}
+              tipOf={fullLabelOf}
               selectedLayerId={selected?.layerId ?? null}
               onSelect={(zoneId, layerId) => setSelected({ zoneId, layerId })}
             />
@@ -1160,8 +998,8 @@ const ComponentInner: React.FC = () => {
                 size="small"
                 columns={detailColumns}
                 dataSource={flatRows}
-                pagination={false}
-                scroll={{ x: 1800, y: 460 }}
+                pagination={{ pageSize: 15, showSizeChanger: false, showTotal: (t) => `共 ${t} 层` }}
+                scroll={{ x: 2000, y: 460 }}
                 rowClassName={(r) =>
                   r.layer.id === selected?.layerId ? 'ant-table-row-selected' : ''
                 }
@@ -1178,10 +1016,11 @@ const ComponentInner: React.FC = () => {
           yardName={yard.shortName}
           zone={selectedZone}
           layer={selectedLayer}
-          unmarkedCount={totals.unmarkedCount}
+          unmarkedLayers={totals.unmarkedLayers}
           onMark={openMark}
-          onResize={openResize}
-          onMerge={handleMerge}
+          onSplit={() => setSplitOpen(true)}
+          onMerge={openMerge}
+          onDelete={handleDelete}
           onLocateUnmarked={locateUnmarked}
         />
       </div>
@@ -1204,7 +1043,7 @@ const ComponentInner: React.FC = () => {
                     columns={moveColumns}
                     dataSource={yardMoves.filter((m) => m.type === 'in')}
                     pagination={{ pageSize: 5, showTotal: (t) => `共 ${t} 条` }}
-                    scroll={{ x: 1080 }}
+                    scroll={{ x: 1180 }}
                   />
                 </div>
               ),
@@ -1224,10 +1063,11 @@ const ComponentInner: React.FC = () => {
                     columns={moveColumns}
                     dataSource={yardMoves.filter((m) => m.type === 'out')}
                     pagination={{ pageSize: 5, showTotal: (t) => `共 ${t} 条` }}
-                    scroll={{ x: 1080 }}
+                    scroll={{ x: 1180 }}
                   />
                   <div className="cssm-hint" style={{ marginTop: 8 }}>
-                    出库按煤层顺序自上而下扣减，逐层按其批次归属拆分明细，可直接作为分区、批次口径的耗用依据。
+                    出库按后进先出顺序自表层向下扣减，逐层按其入厂批次拆分明细，可直接作为分区、
+                    批次口径的耗用依据。
                   </div>
                 </div>
               ),
@@ -1247,52 +1087,11 @@ const ComponentInner: React.FC = () => {
                     columns={auditColumns}
                     dataSource={audits}
                     pagination={{ pageSize: 5, showTotal: (t) => `共 ${t} 条` }}
-                    scroll={{ x: 1080 }}
+                    scroll={{ x: 1180 }}
                   />
-                </div>
-              ),
-            },
-            {
-              key: 'ledger',
-              label: (
-                <span>
-                  <DatabaseOutlined /> 厂外手动台账
-                </span>
-              ),
-              children: (
-                <div className="cssm-foot-body">
-                  {yard.hasSurvey ? (
-                    <Alert
-                      type="info"
-                      showIcon
-                      style={{ marginBottom: 12 }}
-                      title="当前为厂内盘煤煤场"
-                      description="手动台账仅用于无盘煤数据源的煤场（如厂外中转煤场）。切换到厂外中转煤场后可登记入库、出库或直接调整库存。"
-                    />
-                  ) : (
-                    <Space style={{ marginBottom: 12 }} wrap>
-                      <Button type="primary" icon={<ImportOutlined />} onClick={() => openManual('in')}>
-                        登记入库
-                      </Button>
-                      <Button icon={<ExportOutlined />} onClick={() => openManual('out')}>
-                        登记出库
-                      </Button>
-                      <Button icon={<SlidersOutlined />} onClick={() => openManual('set')}>
-                        直接调整库存
-                      </Button>
-                      <span className="cssm-hint">
-                        每笔登记都会按堆煤／取煤顺序回写到数字化煤场的煤堆分层结构，保证煤场存煤有量可供取煤扣减。
-                      </span>
-                    </Space>
-                  )}
-                  <Table<OuterLedgerEntry>
-                    rowKey="id"
-                    size="small"
-                    columns={ledgerColumns}
-                    dataSource={ledger}
-                    pagination={{ pageSize: 5, showTotal: (t) => `共 ${t} 条` }}
-                    scroll={{ x: 1080 }}
-                  />
+                  <div className="cssm-hint" style={{ marginTop: 8 }}>
+                    标记、拆分、合并、删除与出入库等人工调整均自动留痕，含调整前后的量值对照。
+                  </div>
                 </div>
               ),
             },
@@ -1306,74 +1105,147 @@ const ComponentInner: React.FC = () => {
         zones={zones}
         defaultDensity={density}
         onClose={() => setSurveyOpen(false)}
-        onApply={handleApplySurvey}
+        onApply={(plan: SurveyPlan, input: SurveyInput) => {
+          const stackedAt = dayjs().format('YYYY-MM-DD');
+          const time = nowText();
+          const before = totals.surveyVolume;
+          const after = plan.items.reduce((s, i) => s + i.newVolume, 0);
+          setZones((prev) => applySurveyPlan(prev, plan, input, stackedAt));
+          setMoves((prev) => [
+            ...plan.items.flatMap((item) =>
+              item.kind === 'none'
+                ? []
+                : item.details.map((d) => ({
+                    id: nextRecordId('M'),
+                    time,
+                    type: item.kind === 'in' ? ('in' as const) : ('out' as const),
+                    yardId,
+                    zoneName: item.zoneName,
+                    regNo: d.regNo,
+                    coalTypeName: d.coalTypeName,
+                    volume: d.volume,
+                    mass: d.mass,
+                    source: 'survey-auto' as const,
+                    note:
+                      item.kind === 'in'
+                        ? plan.autoMatched
+                          ? `盘煤体积 +${fmt(item.delta)} m³，匹配密度 ${plan.matchDensity?.toFixed(
+                              3,
+                            )} t/m³ 合理，自动识别入厂批次；新增煤层俯仰夹角 ${item.pitchFrom?.toFixed(
+                              1,
+                            )}° → ${item.pitchTo?.toFixed(1)}°`
+                          : `盘煤体积 +${fmt(item.delta)} m³，匹配密度超出合理区间，生成待标记煤层`
+                        : `盘煤体积 ${fmt(item.delta)} m³，按煤层顺序自上而下扣减`,
+                  })),
+            ),
+            ...prev,
+          ]);
+          pushAudit(
+            `${yard.shortName} · 全场`,
+            '执行盘煤比对',
+            `盘煤体积 ${fmt(before)} m³`,
+            `盘煤体积 ${fmt(after)} m³`,
+          );
+          setSurveyOpen(false);
+          setSelected(null);
+          if (plan.autoMatched) {
+            message.success(
+              `盘煤比对完成：新增体积按匹配密度 ${plan.matchDensity?.toFixed(3)} t/m³ 自动识别批次`,
+            );
+          } else {
+            message.warning(
+              `盘煤比对完成：新增体积生成 ${plan.newUnmarkedLayers} 个待标记煤层，请核对入厂台账后标记`,
+            );
+          }
+        }}
       />
 
-      {/* 标记 / 更改煤层批次 */}
+      <InboundDrawer
+        open={inboundOpen}
+        yard={yard}
+        zones={computedZones}
+        rawZones={zones}
+        defaultDensity={density}
+        onClose={() => setInboundOpen(false)}
+        onSubmit={handleInboundSubmit}
+      />
+
+      <OutboundDrawer
+        open={outboundOpen}
+        yard={yard}
+        zones={computedZones}
+        presetZoneId={selected?.zoneId ?? null}
+        onClose={() => setOutboundOpen(false)}
+        onSubmit={handleOutboundSubmit}
+      />
+
+      <SplitLayerDrawer
+        open={splitOpen}
+        yardName={yard.shortName}
+        zone={selectedZone}
+        layer={selectedLayer}
+        onClose={() => setSplitOpen(false)}
+        onSubmit={handleSplitSubmit}
+      />
+
+      <MergeLayerDrawer
+        open={mergeOpen}
+        yardName={yard.shortName}
+        zone={selectedZone}
+        layerId={selected?.layerId ?? null}
+        direction={mergeDirection}
+        onClose={() => setMergeOpen(false)}
+        onSubmit={handleMergeSubmit}
+      />
+
       <Modal
-        title={
-          selectedLayer?.raw.status === 'unmarked' ? '标记存煤批次' : '更改煤层批次与煤质'
-        }
+        title={selectedLayer?.raw.status === 'unmarked' ? '标记入厂批次' : '更改入厂批次与煤质'}
         open={markOpen}
         onCancel={() => setMarkOpen(false)}
         onOk={submitMark}
         okText="保存"
         cancelText="取消"
-        width={620}
+        width={640}
         destroyOnHidden
       >
         <div className="cssm-form-note">
           {selectedZone && selectedLayer && (
             <>
-              {yard.shortName} · {selectedZone.name} · 第 {selectedLayer.seq} 层 ·
-              体积 <b>{fmt(selectedLayer.volume)} m³</b> · 标高{' '}
+              {yard.shortName} · {selectedZone.name} · 第 {selectedLayer.seq} 层 · 体积{' '}
+              <b>{fmt(selectedLayer.volume)} m³</b> · 标高{' '}
               <b>
-                {selectedLayer.bound.heightBottom.toFixed(1)} ~{' '}
-                {selectedLayer.bound.heightTop.toFixed(1)} m
+                {selectedLayer.bound.heightBottom.toFixed(2)} ~{' '}
+                {selectedLayer.bound.heightTop.toFixed(2)} m
               </b>
-              。选择接卸批次后自动带入该批次的船名、航次与化验煤质；煤量按所填密度与层体积重算。
+              。选择入厂登记编号后自动带入该批次的船名、航次与化验煤质；煤量按所填计算密度与层体积重算。
             </>
           )}
         </div>
         <Form form={markForm} layout="vertical" requiredMark={false} initialValues={markInitial}>
           <Form.Item
-            label="存煤批次"
-            name="batchNo"
-            rules={[{ required: true, message: '请选择存煤批次' }]}
+            label="入厂登记编号"
+            name="regNo"
+            rules={[{ required: true, message: '请选择入厂登记编号' }]}
           >
             <Select
               showSearch
               optionFilterProp="label"
-              placeholder="按批次号或船名检索"
+              placeholder="按登记编号或船名检索"
               options={ARRIVAL_BATCHES.map((b) => ({
-                value: b.batchNo,
-                label: `${b.batchNo} · ${b.shipName} · ${coalTypeName(b.coalType)}`,
+                value: b.regNo,
+                label: `${b.regNo} · ${b.shipName} · ${coalTypeName(b.coalType)}`,
               }))}
               onChange={(v) => {
                 const b = findBatch(v);
-                if (b) {
-                  markForm.setFieldsValue({
-                    shipName: b.shipName,
-                    voyage: b.voyage,
-                    coalType: b.coalType,
-                  });
-                }
+                if (b) markForm.setFieldsValue({ coalType: b.coalType });
               }}
             />
           </Form.Item>
-          <div className="cssm-grid-2" style={{ gridTemplateColumns: '1fr 140px' }}>
-            <Form.Item label="船名" name="shipName">
-              <Input placeholder="选择批次后自动带入" />
-            </Form.Item>
-            <Form.Item label="航次" name="voyage">
-              <Input placeholder="航次" />
-            </Form.Item>
-          </div>
           <div className="cssm-grid-2" style={{ gridTemplateColumns: '1fr 190px' }}>
             <Form.Item
-              label="煤种"
+              label="库存煤种"
               name="coalType"
-              rules={[{ required: true, message: '请选择煤种' }]}
+              rules={[{ required: true, message: '请选择库存煤种' }]}
             >
               <Select
                 options={Object.entries(COAL_TYPES).map(([key, meta]) => ({
@@ -1383,9 +1255,9 @@ const ComponentInner: React.FC = () => {
               />
             </Form.Item>
             <Form.Item
-              label="堆积密度"
+              label="计算密度"
               name="density"
-              rules={[{ required: true, message: '请输入密度' }]}
+              rules={[{ required: true, message: '请输入计算密度' }]}
             >
               <InputNumber
                 min={0.6}
@@ -1399,169 +1271,6 @@ const ComponentInner: React.FC = () => {
         </Form>
       </Modal>
 
-      {/* 调整煤量 / 起始俯仰角 */}
-      <Modal
-        title="调整煤层煤量 / 起始俯仰角"
-        open={resizeOpen}
-        onCancel={() => setResizeOpen(false)}
-        onOk={submitResize}
-        okText="按几何关系重算"
-        cancelText="取消"
-        width={560}
-        destroyOnHidden
-      >
-        {selectedZone && selectedLayer && (
-          <>
-            <div className="cssm-form-note">
-              配置本层煤量或层顶俯仰角，系统按堆煤顺序与直扇形楔几何关系自动重算煤层分布；
-              差额优先与相邻上层借还，以保持分区总体积不超过盘煤体积上限{' '}
-              <b>{fmt(selectedZone.raw.surveyVolume)} m³</b>。
-            </div>
-            <div className="cssm-stack-form">
-              <label htmlFor="cssm-resize-mode">调整方式</label>
-              <Radio.Group
-                id="cssm-resize-mode"
-                optionType="button"
-                buttonStyle="solid"
-                value={resizeMode}
-                onChange={(e) => {
-                  const mode = e.target.value as 'mass' | 'pitch';
-                  setResizeMode(mode);
-                  setResizeValue(
-                    mode === 'mass'
-                      ? Math.round(selectedLayer.mass)
-                      : Number(selectedLayer.bound.pitchTop.toFixed(1)),
-                  );
-                }}
-                options={[
-                  { label: '按煤量（t）', value: 'mass' },
-                  { label: '按层顶俯仰角（°）', value: 'pitch' },
-                ]}
-              />
-              <label htmlFor="cssm-resize-value">
-                {resizeMode === 'mass' ? '目标煤量' : '目标层顶俯仰角'}
-              </label>
-              <InputNumber
-                id="cssm-resize-value"
-                style={{ width: '100%' }}
-                min={resizeMode === 'mass' ? 0 : -18}
-                max={resizeMode === 'mass' ? 200000 : 26}
-                step={resizeMode === 'mass' ? 100 : 0.5}
-                suffix={resizeMode === 'mass' ? 't' : '°'}
-                value={resizeValue}
-                onChange={(v) => setResizeValue(Number(v ?? 0))}
-              />
-            </div>
-            {resizePreview && (
-              <div className="cssm-convert">
-                换算体积 <b className="cssm-num">{fmt(resizePreview.volume)} m³</b>　·　估算煤量{' '}
-                <b className="cssm-num">{fmt(resizePreview.mass)} t</b>
-                <br />
-                层顶标高 <b className="cssm-num">{resizePreview.heightTop.toFixed(2)} m</b>　·　
-                层顶俯仰角 <b className="cssm-num">{resizePreview.pitchTop.toFixed(1)}°</b>
-                <br />
-                与相邻上层借还{' '}
-                <b className="cssm-num">
-                  {resizePreview.borrowed >= 0 ? '+' : ''}
-                  {fmt(resizePreview.borrowed)} m³
-                </b>
-                {resizePreview.capped && (
-                  <span style={{ color: UNMARKED_COLOR }}>（已受上层存量限制）</span>
-                )}
-              </div>
-            )}
-          </>
-        )}
-      </Modal>
-
-      {/* 厂外煤场手动维护 */}
-      <Modal
-        title={
-          manualType === 'in' ? '登记入库' : manualType === 'out' ? '登记出库' : '直接调整库存'
-        }
-        open={manualOpen}
-        onCancel={() => setManualOpen(false)}
-        onOk={submitManual}
-        okText="确认登记"
-        cancelText="取消"
-        width={580}
-        destroyOnHidden
-      >
-        <div className="cssm-form-note">
-          {yard.shortName} 无盘煤数据源，库存以手动台账为准。登记后系统按{' '}
-          {manualType === 'out' ? '取煤顺序自上而下扣减' : '堆煤顺序堆至煤堆顶层'}
-          ，自动回写至数字化煤场的煤堆分层结构。
-        </div>
-        <Form
-          form={manualForm}
-          layout="vertical"
-          requiredMark={false}
-          initialValues={manualInitial}
-        >
-          <Radio.Group
-            optionType="button"
-            buttonStyle="solid"
-            value={manualType}
-            style={{ marginBottom: 16 }}
-            onChange={(e) => {
-              const t = e.target.value as 'in' | 'out' | 'set';
-              setManualType(t);
-              const zone = computedZones.find((z) => z.id === manualForm.getFieldValue('zoneId'));
-              manualForm.setFieldsValue({
-                mass: t === 'set' ? Math.round(zone?.totalMass ?? 0) : 1000,
-              });
-            }}
-            options={[
-              { label: '入库', value: 'in' },
-              { label: '出库', value: 'out' },
-              { label: '库存调整', value: 'set' },
-            ]}
-          />
-          <div className="cssm-grid-2" style={{ gridTemplateColumns: '1fr 170px' }}>
-            <Form.Item
-              label={manualType === 'in' ? '入库时间' : '登记时间'}
-              name="time"
-              rules={[{ required: true, message: '请选择时间' }]}
-            >
-              <DatePicker showTime format="YYYY-MM-DD HH:mm" style={{ width: '100%' }} />
-            </Form.Item>
-            <Form.Item
-              label="目标分区"
-              name="zoneId"
-              rules={[{ required: true, message: '请选择分区' }]}
-            >
-              <Select options={computedZones.map((z) => ({ value: z.id, label: z.name }))} />
-            </Form.Item>
-          </div>
-          <Form.Item
-            label="来煤批次"
-            name="batchNo"
-            extra={manualType === 'out' ? '出库按煤层实际批次自动拆分，无需指定' : '留空将生成待标记煤层'}
-          >
-            <Select
-              allowClear
-              showSearch
-              optionFilterProp="label"
-              disabled={manualType === 'out'}
-              placeholder="选择来煤批次"
-              options={ARRIVAL_BATCHES.map((b) => ({
-                value: b.batchNo,
-                label: `${b.batchNo} · ${b.shipName} · ${coalTypeName(b.coalType)}`,
-              }))}
-            />
-          </Form.Item>
-          <Form.Item
-            label={manualType === 'set' ? '目标库存煤量' : manualType === 'in' ? '入库煤量' : '出库煤量'}
-            name="mass"
-            rules={[{ required: true, message: '请输入煤量' }]}
-          >
-            <InputNumber min={0} max={200000} step={100} suffix="t" style={{ width: '100%' }} />
-          </Form.Item>
-          <Form.Item label="备注" name="note">
-            <Input.TextArea rows={2} placeholder="如：汽运转堆入库 / 倒运至厂内 #1 煤场" />
-          </Form.Item>
-        </Form>
-      </Modal>
     </div>
   );
 };

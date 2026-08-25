@@ -3,7 +3,7 @@
  *
  * 把 20 m 堆煤高度上限划分为 200 个 10 cm 分带，以热力图方块呈现各分区的实际堆煤情况：
  * 纵轴是真实标高，因此煤层厚度直接表现为方块的连续段数，分区堆高差异一眼可比。
- * 三轴：左侧堆煤高度（m）、底部分区编号（增序）、右侧对应的悬臂俯仰角度（°）。
+ * 三轴：左侧堆煤高度（m）、底部分区编号（增序）、右侧对应的俯仰夹角（0°～45° 对应 0～20 m 挡煤墙）。
  */
 
 import React, { useMemo } from 'react';
@@ -110,7 +110,7 @@ const StackHeatmap: React.FC<Props> = ({
           />
         ))}
 
-        {/* 左轴：堆煤高度 m ；右轴：对应悬臂俯仰角度 ° */}
+        {/* 左轴：堆煤高度 m ；右轴：对应俯仰夹角 °（0°～45° ↔ 0～20 m） */}
         {heightTicks.map((m) => (
           <g key={`tick-${m}`}>
             <line
@@ -136,7 +136,6 @@ const StackHeatmap: React.FC<Props> = ({
               fontSize={9.5}
               fill={AXIS.label}
             >
-              {geo.pitchFromHeight(g, m) >= 0 ? '+' : ''}
               {geo.pitchFromHeight(g, m).toFixed(1)}°
             </text>
           </g>
@@ -145,7 +144,7 @@ const StackHeatmap: React.FC<Props> = ({
           堆煤高度 m
         </text>
         <text x={axisL + zones.length * colW + 9} y={PAD_T - 5} fontSize={9} fill={AXIS.muted}>
-          俯仰角度
+          俯仰夹角 °
         </text>
 
         {/* 分区列 */}

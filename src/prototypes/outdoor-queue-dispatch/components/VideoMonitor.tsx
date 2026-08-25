@@ -1,17 +1,18 @@
 /**
- * 当前通道车号识别模拟监控窗
+ * 当前通道车号识别监控窗（窄栏 4:3，避免又宽又矮）
  */
 import React from 'react';
-import type { QueueChannel, RecognizeLog } from '../data';
+import type { QueueChannel } from '../data';
 
 interface Props {
   channel: QueueChannel;
-  latest?: RecognizeLog;
+  plate?: string;
+  recognizedAt?: string;
   led: string;
   live: boolean;
 }
 
-const VideoMonitor: React.FC<Props> = ({ channel, latest, led, live }) => (
+const VideoMonitor: React.FC<Props> = ({ channel, plate, recognizedAt, led, live }) => (
   <section className="oqd-card oqd-video-card">
     <div className="oqd-card-hd">
       <h2>车号识别监控</h2>
@@ -21,9 +22,9 @@ const VideoMonitor: React.FC<Props> = ({ channel, latest, led, live }) => (
       <div className="oqd-video-scene" aria-hidden>
         <div className="oqd-road" />
         <div className="oqd-lane" />
-        {latest ? (
+        {plate ? (
           <div className="oqd-plate-hit">
-            <span>{latest.plate}</span>
+            <span>{plate}</span>
             <em>识别成功</em>
           </div>
         ) : (
@@ -31,12 +32,10 @@ const VideoMonitor: React.FC<Props> = ({ channel, latest, led, live }) => (
         )}
       </div>
       <div className="oqd-video-hud">
-        <span>
-          {channel.name} · {channel.entryPoints.map((p) => p.name).join(' / ')}
-        </span>
-        <span>{latest?.recognizedAt ?? '—'}</span>
+        <span>{channel.name}</span>
+        <span>{recognizedAt ?? '—'}</span>
       </div>
-      <p className="oqd-led-line">LED {led}</p>
+      <p className="oqd-led-line">{led}</p>
     </div>
   </section>
 );

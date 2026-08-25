@@ -7,8 +7,8 @@
  */
 
 export type QueueStatus = 'normal' | 'frozen' | 'priority';
-export type DeviceKind = 'anpr' | 'led' | 'barrier' | 'terminal';
-export type DeviceHealth = 'online' | 'alarm' | 'offline';
+export type DeviceKind = 'anpr' | 'led';
+export type DeviceHealth = 'online' | 'offline';
 
 export interface EntryPointRef {
   id: string;
@@ -28,14 +28,17 @@ export interface ChannelDevice {
   kind: DeviceKind;
   name: string;
   health: DeviceHealth;
-  remark: string;
 }
 
-export interface RecognizeLog {
+export type LogLevel = 'info' | 'error';
+
+export interface ConsoleLog {
   id: string;
   channelId: string;
-  plate: string;
-  recognizedAt: string;
+  time: string;
+  message: string;
+  plate?: string;
+  level: LogLevel;
 }
 
 export interface QueueVehicle {
@@ -74,32 +77,13 @@ export const CHANNELS: QueueChannel[] = [
 ];
 
 export const DEVICES: ChannelDevice[] = [
-  { id: 'd-s-anpr', channelId: 'south', kind: 'anpr', name: '南通道车号识别相机', health: 'online', remark: '车道 1 抓拍正常' },
-  { id: 'd-s-led', channelId: 'south', kind: 'led', name: '南通道 LED 诱导屏', health: 'online', remark: '屏显随队首更新' },
-  { id: 'd-s-gate', channelId: 'south', kind: 'barrier', name: '南通道道闸', health: 'online', remark: '落杆待命' },
-  { id: 'd-s-term', channelId: 'south', kind: 'terminal', name: '南通道排队终端', health: 'online', remark: '自动取号可用' },
-  { id: 'd-n-anpr', channelId: 'north', kind: 'anpr', name: '北通道车号识别相机', health: 'online', remark: '车道 1 抓拍正常' },
-  { id: 'd-n-led', channelId: 'north', kind: 'led', name: '北通道 LED 诱导屏', health: 'alarm', remark: '通信不稳定，已降级本地缓存' },
-  { id: 'd-n-gate', channelId: 'north', kind: 'barrier', name: '北通道道闸', health: 'online', remark: '落杆待命' },
-  { id: 'd-n-term', channelId: 'north', kind: 'terminal', name: '北通道排队终端', health: 'online', remark: '自动取号可用' },
-  { id: 'd-e-anpr', channelId: 'east', kind: 'anpr', name: '东通道车号识别相机', health: 'online', remark: '车道 1 抓拍正常' },
-  { id: 'd-e-led', channelId: 'east', kind: 'led', name: '东通道 LED 诱导屏', health: 'online', remark: '屏显随队首更新' },
-  { id: 'd-e-gate', channelId: 'east', kind: 'barrier', name: '东通道道闸', health: 'offline', remark: '控制回路断开' },
-  { id: 'd-e-term', channelId: 'east', kind: 'terminal', name: '东通道排队终端', health: 'online', remark: '自动取号可用' },
+  { id: 'd-s-anpr', channelId: 'south', kind: 'anpr', name: '车号识别器', health: 'online' },
+  { id: 'd-s-led', channelId: 'south', kind: 'led', name: 'LED', health: 'online' },
+  { id: 'd-n-anpr', channelId: 'north', kind: 'anpr', name: '车号识别器', health: 'online' },
+  { id: 'd-n-led', channelId: 'north', kind: 'led', name: 'LED', health: 'offline' },
+  { id: 'd-e-anpr', channelId: 'east', kind: 'anpr', name: '车号识别器', health: 'offline' },
+  { id: 'd-e-led', channelId: 'east', kind: 'led', name: 'LED', health: 'online' },
 ];
-
-export const KIND_LABEL: Record<DeviceKind, string> = {
-  anpr: '车号识别',
-  led: 'LED 诱导屏',
-  barrier: '道闸',
-  terminal: '排队终端',
-};
-
-export const HEALTH_LABEL: Record<DeviceHealth, string> = {
-  online: '在线',
-  alarm: '告警',
-  offline: '离线',
-};
 
 export const STATUS_LABEL: Record<QueueStatus, string> = {
   normal: '正常',
@@ -120,18 +104,18 @@ export const PASSING_PLATES = [
   '宁C20817',
 ];
 
-export const INITIAL_LOGS: RecognizeLog[] = [
-  { id: 'l-s-6', channelId: 'south', plate: '晋M77821', recognizedAt: '2026-08-25 11:48:22' },
-  { id: 'l-s-5', channelId: 'south', plate: '豫E33211', recognizedAt: '2026-08-25 11:46:05' },
-  { id: 'l-s-4', channelId: 'south', plate: '蒙A90005', recognizedAt: '2026-08-25 11:41:18' },
-  { id: 'l-s-3', channelId: 'south', plate: '鲁B12876', recognizedAt: '2026-08-25 11:36:40' },
-  { id: 'l-s-2', channelId: 'south', plate: '桂A8T216', recognizedAt: '2026-08-25 11:28:11' },
-  { id: 'l-s-1', channelId: 'south', plate: '湘C92223', recognizedAt: '2026-08-25 11:12:09' },
-  { id: 'l-n-3', channelId: 'north', plate: '宁C20817', recognizedAt: '2026-08-25 11:44:51' },
-  { id: 'l-n-2', channelId: 'north', plate: '冀J41930', recognizedAt: '2026-08-25 11:31:07' },
-  { id: 'l-n-1', channelId: 'north', plate: '陕A66208', recognizedAt: '2026-08-25 11:18:33' },
-  { id: 'l-e-2', channelId: 'east', plate: '皖B55190', recognizedAt: '2026-08-25 11:22:14' },
-  { id: 'l-e-1', channelId: 'east', plate: '晋M77821', recognizedAt: '2026-08-25 10:58:02' },
+export const INITIAL_LOGS: ConsoleLog[] = [
+  { id: 'l-s-6', channelId: 'south', time: '2026-08-25 11:48:22', message: '晋M77821 排队成功', plate: '晋M77821', level: 'info' },
+  { id: 'l-s-5', channelId: 'south', time: '2026-08-25 11:46:05', message: '豫E33211 排队成功', plate: '豫E33211', level: 'info' },
+  { id: 'l-s-4', channelId: 'south', time: '2026-08-25 11:41:18', message: '蒙A90005 排队成功', plate: '蒙A90005', level: 'info' },
+  { id: 'l-s-3', channelId: 'south', time: '2026-08-25 11:36:40', message: '鲁B12876 排队成功', plate: '鲁B12876', level: 'info' },
+  { id: 'l-s-2', channelId: 'south', time: '2026-08-25 11:28:11', message: '桂A8T216 排队成功', plate: '桂A8T216', level: 'info' },
+  { id: 'l-s-1', channelId: 'south', time: '2026-08-25 11:12:09', message: '湘C92223 排队成功', plate: '湘C92223', level: 'info' },
+  { id: 'l-n-3', channelId: 'north', time: '2026-08-25 11:44:51', message: '设备异常离线无法正常排队请检查', level: 'error' },
+  { id: 'l-n-2', channelId: 'north', time: '2026-08-25 11:31:07', message: '冀J41930 排队成功', plate: '冀J41930', level: 'info' },
+  { id: 'l-n-1', channelId: 'north', time: '2026-08-25 11:18:33', message: '陕A66208 排队成功', plate: '陕A66208', level: 'info' },
+  { id: 'l-e-2', channelId: 'east', time: '2026-08-25 11:22:14', message: '设备异常离线无法正常排队请检查', level: 'error' },
+  { id: 'l-e-1', channelId: 'east', time: '2026-08-25 10:58:02', message: '晋M77821 排队成功', plate: '晋M77821', level: 'info' },
 ];
 
 export const INITIAL_QUEUE: QueueVehicle[] = [
@@ -268,13 +252,14 @@ export const plateSvgDataUri = (plate: string) => {
   return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
 };
 
-export const ledText = (
-  plantQueueOn: boolean,
-  yunyiOn: boolean,
-  head?: QueueVehicle,
-) => {
-  if (yunyiOn) return '请使用云驿 APP 取号';
+export const ledText = (plantQueueOn: boolean, head?: QueueVehicle) => {
   if (!plantQueueOn) return '排队程序已停用';
   if (!head) return '暂无排队车辆';
   return `请 ${head.plate} 入厂  当前叫号 ${head.ticketNo}`;
 };
+
+export const devicesOnline = (devices: ChannelDevice[]) => devices.every((d) => d.health === 'online');
+
+/** 厂外自动排队开启时调用，关闭云驿排队（界面不展示云驿开关）。 */
+export const closeYunyiQueueApi = () =>
+  Promise.resolve({ ok: true as const, message: '已调用接口关闭云驿排队' });

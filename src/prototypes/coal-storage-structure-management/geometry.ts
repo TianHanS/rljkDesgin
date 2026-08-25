@@ -19,7 +19,7 @@
  *
  * 参考资料：
  * - /rules/design-guide.md
- * - 用户提供的存煤结构管理业务描述（圆形/条形煤场、2～3 分区、20 m 堆高上限）
+ * - 用户提供的存煤结构管理业务描述（圆形 36 分区每区 10° / 条形 3 分区、20 m 堆高上限）
  */
 
 export type YardShape = 'circular' | 'strip';

@@ -25,7 +25,11 @@ const LayerMatrix: React.FC<Props> = ({ zones, labelOf, tipOf, selectedLayerId, 
     <div className="cssm-matrix-wrap">
       <div
         className="cssm-matrix"
-        style={{ gridTemplateColumns: `88px repeat(${zones.length}, minmax(160px, 1fr))` }}
+        style={{
+          gridTemplateColumns: `88px repeat(${zones.length}, minmax(${
+            zones.length > 8 ? 92 : 160
+          }px, 1fr))`,
+        }}
       >
         <div className="cssm-mcell is-head">层序 / 分区</div>
         {zones.map((z) => (

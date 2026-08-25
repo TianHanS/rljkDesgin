@@ -8,7 +8,7 @@
  * - /src/themes/antd-new/DESIGN-SPEC.md
  * - /skills/third-party/interface-design/SKILL.md
  * - /skills/ui-ux-pro-max/SKILL.md
- * - 用户提供的煤场存煤结构管理业务描述（圆形/条形煤场，每场 2～3 分区）
+ * - 用户提供的煤场存煤结构管理业务描述（圆形 36 分区 / 条形 3 分区）
  */
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {

@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-08-24T07:56:17.951Z",
+  "updatedAt": "2026-08-25T12:24:27.457Z",
   "prototypes": [
     {
       "id": "item-prototypes-ref-antd",
@@ -299,6 +299,18 @@
       "kind": "item",
       "title": "coal storage structure management",
       "itemKey": "prototypes/coal-storage-structure-management"
+    },
+    {
+      "id": "item-prototypes-auto-entry-monitor",
+      "kind": "item",
+      "title": "auto entry monitor",
+      "itemKey": "prototypes/auto-entry-monitor"
+    },
+    {
+      "id": "item-prototypes-manual-entry-registration",
+      "kind": "item",
+      "title": "manual entry registration",
+      "itemKey": "prototypes/manual-entry-registration"
     }
   ],
   "components": [

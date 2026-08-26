@@ -7,18 +7,16 @@
  * - /src/themes/antd-new/DESIGN-SPEC.md
  * - /skills/third-party/frontend-design/SKILL.md
  * - /skills/third-party/ant-design/SKILL.md
+ * - /skills/default-design-guide-minimal/SKILL.md
  * - /src/prototypes/auto-entry-monitor/spec.md
  */
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { ConfigProvider, Modal, Segmented, Table, Tag, message } from 'antd';
+import { ConfigProvider, Modal, Segmented, message } from 'antd';
 import zhCN from 'antd/locale/zh_CN';
-import type { ColumnsType } from 'antd/es/table';
 import './style.css';
 import GatePointCard from './components/GatePointCard';
 import {
   LIVE_PLATES,
-  QUEUE_STATUS_LABEL,
-  QUEUE_VEHICLES,
   SAMPLE_POS,
   SYSTEMS,
   WEIGH_POS,
@@ -29,7 +27,6 @@ import {
   formatDateTime,
   nextLogId,
   type GatePoint,
-  type QueueVehicle,
   type RunLog,
   type SystemInfo,
 } from './data';
@@ -78,8 +75,6 @@ const AutoEntryMonitor: React.FC = () => {
   const visibleGates = system.gateIds
     .map((id) => gates.find((gate) => gate.id === id))
     .filter((gate): gate is GatePoint => Boolean(gate));
-
-  const queueList = QUEUE_VEHICLES.filter((item) => item.systemId === systemId);
 
   const confirmToggle = useCallback((gate: GatePoint, next: boolean) => {
     const action = next ? '启用' : '停用';
@@ -174,69 +169,33 @@ const AutoEntryMonitor: React.FC = () => {
     return () => window.clearInterval(timer);
   }, [systemId]);
 
-  const queueColumns: ColumnsType<QueueVehicle> = [
-    { title: '排队序号', dataIndex: 'seq', width: 90 },
-    { title: '车牌号', dataIndex: 'plate', width: 120 },
-    { title: '煤种/物资', dataIndex: 'cargo', width: 120 },
-    { title: '供应商', dataIndex: 'supplier' },
-    {
-      title: '等待时长',
-      dataIndex: 'waitMin',
-      width: 110,
-      render: (value: number) => (
-        <span style={{ color: value >= 30 ? '#cf1322' : undefined }}>{value} 分钟</span>
-      ),
-    },
-    {
-      title: '排队状态',
-      dataIndex: 'status',
-      width: 120,
-      render: (status: QueueVehicle['status']) => {
-        const color = status === 'overtime' ? 'error' : status === 'approaching' ? 'processing' : 'default';
-        return <Tag color={color}>{QUEUE_STATUS_LABEL[status]}</Tag>;
-      },
-    },
-  ];
-
-  const systemHint = system.id === 'system-a' ? '入厂点 1#、2#' : '入厂点 3#、4#';
-
   return (
     <ConfigProvider locale={zhCN}>
       <div className="aem-root">
-        <header className="aem-head">
-          <div>
-            <h1>自动入厂监测</h1>
-            <p>
-              一屏对照当前系统 2 个入厂点 · 切换系统后视频、日志与排队列表同步更新
-            </p>
-          </div>
-          <div className="aem-head-tools">
-            <Segmented
-              className="aem-system-switch"
-              value={systemId}
-              options={SYSTEMS.map((item) => ({
-                label: (
-                  <span className="aem-system-opt">
-                    <span className="aem-system-name">{item.name}</span>
-                    <span className="aem-system-gates">
-                      {item.id === 'system-a' ? '1# · 2#' : '3# · 4#'}
-                    </span>
+        <div className="aem-toolbar">
+          <Segmented
+            className="aem-system-switch"
+            value={systemId}
+            options={SYSTEMS.map((item) => ({
+              label: (
+                <span className="aem-system-opt">
+                  <span className="aem-system-name">{item.name}</span>
+                  <span className="aem-system-gates">
+                    {item.id === 'system-a' ? '入厂点 1# · 2#' : '入厂点 3# · 4#'}
                   </span>
-                ),
-                value: item.id,
-              }))}
-              onChange={(value) => setSystemId(String(value))}
-            />
-            <div className="aem-clock">{formatClock(now)}</div>
-          </div>
-        </header>
+                </span>
+              ),
+              value: item.id,
+            }))}
+            onChange={(value) => setSystemId(String(value))}
+          />
+        </div>
 
         <div className="aem-body">
           {visibleGates.map((gate) => (
             <GatePointCard
               key={gate.id}
               gate={gate}
-              systemName={system.name}
               clock={formatClock(now)}
               logs={logs.filter((item) => item.gateId === gate.id)}
               records={records.filter((item) => item.gateId === gate.id)}
@@ -244,23 +203,6 @@ const AutoEntryMonitor: React.FC = () => {
             />
           ))}
         </div>
-
-        <section className="aem-queue">
-          <div className="aem-queue-hd">
-            <h2>{system.name}排队车辆</h2>
-            <span className="aem-queue-sub">{systemHint} · 按排队序号展示，超时车辆红色标识</span>
-          </div>
-          <div className="aem-queue-bd">
-            <Table
-              size="small"
-              rowKey="id"
-              pagination={false}
-              columns={queueColumns}
-              dataSource={queueList}
-              locale={{ emptyText: '当前系统暂无排队车辆' }}
-            />
-          </div>
-        </section>
       </div>
     </ConfigProvider>
   );

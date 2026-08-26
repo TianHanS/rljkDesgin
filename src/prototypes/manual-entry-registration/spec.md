@@ -172,6 +172,10 @@ src/prototypes/manual-entry-registration/
 
 ## ✅ 验收记录
 
-- 本原型目录 TypeScript：**待验收**。
-- `ENTRY_KEY=prototypes/manual-entry-registration npx vite build`：**待验收**。
-- 浏览器：**待验收**。
+- 本原型目录 TypeScript：**无本目录错误**。
+- `ENTRY_KEY=prototypes/manual-entry-registration npx vite build`：**构建通过**。
+- 浏览器 `http://localhost:51720/prototypes/manual-entry-registration/`，桌面 1440×900：
+  - 登记入厂信息三列字段均为只读下划线（无 Input / Select / DatePicker）；空值显示「—」；采样方式默认「机械采样」。
+  - 页头入厂点 Select 仍可切换；表单区无手改控件。
+  - 选择计划 / 扫码 / 允许入厂仍用于回填；确认登记、清空可用。
+  - 控制台无运行时报错。

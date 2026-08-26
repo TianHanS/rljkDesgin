@@ -5,21 +5,22 @@
  * - /rules/design-guide.md
  * - /rules/development-standards.md
  * - /src/themes/antd-new/DESIGN-SPEC.md
- * - /skills/default-design-guide-minimal/SKILL.md
+ * - /skills/third-party/frontend-design/SKILL.md
+ * - /skills/third-party/ant-design/SKILL.md
  * - /src/prototypes/auto-entry-monitor/spec.md
  */
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ConfigProvider, Modal, Segmented, Table, Tag, message } from 'antd';
 import zhCN from 'antd/locale/zh_CN';
 import type { ColumnsType } from 'antd/es/table';
 import './style.css';
 import GatePointCard from './components/GatePointCard';
 import {
-  CHANNELS,
   LIVE_PLATES,
   QUEUE_STATUS_LABEL,
   QUEUE_VEHICLES,
   SAMPLE_POS,
+  SYSTEMS,
   WEIGH_POS,
   createInitialGates,
   createInitialLogs,
@@ -27,12 +28,10 @@ import {
   formatClock,
   formatDateTime,
   nextLogId,
-  pairWindows,
-  type ChannelInfo,
-  type EntryRecord,
   type GatePoint,
   type QueueVehicle,
   type RunLog,
+  type SystemInfo,
 } from './data';
 
 const LIVE_EVENTS: Array<{
@@ -63,11 +62,10 @@ function ledTextFor(gate: GatePoint, enabled: boolean): string {
 
 const AutoEntryMonitor: React.FC = () => {
   const [now, setNow] = useState(() => new Date());
-  const [channelId, setChannelId] = useState(CHANNELS[0].id);
-  const [pairIndex, setPairIndex] = useState(0);
+  const [systemId, setSystemId] = useState(SYSTEMS[0].id);
   const [gates, setGates] = useState<GatePoint[]>(() => createInitialGates());
   const [logs, setLogs] = useState<RunLog[]>(() => createInitialLogs(new Date()));
-  const [records, setRecords] = useState<EntryRecord[]>(() => createInitialRecords(new Date()));
+  const [records, setRecords] = useState(() => createInitialRecords(new Date()));
   const gatesRef = useRef(gates);
   gatesRef.current = gates;
 
@@ -76,34 +74,12 @@ const AutoEntryMonitor: React.FC = () => {
     return () => window.clearInterval(timer);
   }, []);
 
-  const channel = CHANNELS.find((item) => item.id === channelId) as ChannelInfo;
-  const windows = pairWindows(channel.gateIds);
-  const safePairIndex = Math.min(pairIndex, Math.max(windows.length - 1, 0));
-  const visibleIds = windows[safePairIndex] ?? channel.gateIds.slice(0, 2);
-  const visibleGates = visibleIds
+  const system = SYSTEMS.find((item) => item.id === systemId) as SystemInfo;
+  const visibleGates = system.gateIds
     .map((id) => gates.find((gate) => gate.id === id))
     .filter((gate): gate is GatePoint => Boolean(gate));
 
-  const channelGates = gates.filter((gate) => gate.channelId === channelId);
-  const channelLogs = logs.filter((item) => channelGates.some((gate) => gate.id === item.gateId));
-  const channelRecords = records.filter((item) => channelGates.some((gate) => gate.id === item.gateId));
-  const queueList = QUEUE_VEHICLES.filter((item) => item.channelId === channelId);
-  const plantQueue = QUEUE_VEHICLES.length;
-
-  const stats = useMemo(() => {
-    const waitingOver = queueList.filter((item) => item.waitMin >= 30).length;
-    const avgWait = queueList.length
-      ? Math.round(queueList.reduce((sum, item) => sum + item.waitMin, 0) / queueList.length)
-      : 0;
-    return {
-      queue: queueList.length,
-      entered: channelRecords.length,
-      overtime: waitingOver,
-      inspect: channelLogs.filter((item) => item.kind === 'inspect').length,
-      exception: channelLogs.filter((item) => item.level === 'exception').length,
-      avgWait,
-    };
-  }, [queueList, channelRecords, channelLogs]);
+  const queueList = QUEUE_VEHICLES.filter((item) => item.systemId === systemId);
 
   const confirmToggle = useCallback((gate: GatePoint, next: boolean) => {
     const action = next ? '启用' : '停用';
@@ -142,7 +118,7 @@ const AutoEntryMonitor: React.FC = () => {
   useEffect(() => {
     const timer = window.setInterval(() => {
       const liveGates = gatesRef.current.filter(
-        (gate) => gate.channelId === channelId && gate.serviceEnabled && gate.recognizer === 'online',
+        (gate) => gate.systemId === systemId && gate.serviceEnabled && gate.recognizer === 'online',
       );
       if (liveGates.length === 0) return;
       const target = liveGates[Math.floor(Math.random() * liveGates.length)];
@@ -196,7 +172,7 @@ const AutoEntryMonitor: React.FC = () => {
       );
     }, 7000);
     return () => window.clearInterval(timer);
-  }, [channelId]);
+  }, [systemId]);
 
   const queueColumns: ColumnsType<QueueVehicle> = [
     { title: '排队序号', dataIndex: 'seq', width: 90 },
@@ -222,12 +198,7 @@ const AutoEntryMonitor: React.FC = () => {
     },
   ];
 
-  const pairOptions = windows.map((pair, index) => {
-    const names = pair
-      .map((id) => gates.find((gate) => gate.id === id)?.name.replace('发卡点', '').trim())
-      .join(' / ');
-    return { label: names, value: String(index) };
-  });
+  const systemHint = system.id === 'system-a' ? '入厂点 1#、2#' : '入厂点 3#、4#';
 
   return (
     <ConfigProvider locale={zhCN}>
@@ -236,61 +207,36 @@ const AutoEntryMonitor: React.FC = () => {
           <div>
             <h1>自动入厂监测</h1>
             <p>
-              入厂调度 · 一屏对照当前通道 2 个发卡点。全厂排队 {plantQueue} 辆，切换通道后统计、视频、日志与排队列表同步更新。
+              一屏对照当前系统 2 个入厂点 · 切换系统后视频、日志与排队列表同步更新
             </p>
           </div>
           <div className="aem-head-tools">
             <Segmented
-              value={channelId}
-              options={CHANNELS.map((item) => ({ label: item.name, value: item.id }))}
-              onChange={(value) => {
-                setChannelId(String(value));
-                setPairIndex(0);
-              }}
+              className="aem-system-switch"
+              value={systemId}
+              options={SYSTEMS.map((item) => ({
+                label: (
+                  <span className="aem-system-opt">
+                    <span className="aem-system-name">{item.name}</span>
+                    <span className="aem-system-gates">
+                      {item.id === 'system-a' ? '1# · 2#' : '3# · 4#'}
+                    </span>
+                  </span>
+                ),
+                value: item.id,
+              }))}
+              onChange={(value) => setSystemId(String(value))}
             />
-            {pairOptions.length > 1 ? (
-              <Segmented
-                value={String(safePairIndex)}
-                options={pairOptions}
-                onChange={(value) => setPairIndex(Number(value))}
-              />
-            ) : null}
             <div className="aem-clock">{formatClock(now)}</div>
           </div>
         </header>
-
-        <section className="aem-kpis">
-          <div className="aem-kpi">
-            <div className="label">当前排队</div>
-            <div className="value">{stats.queue}<span className="unit">辆</span></div>
-          </div>
-          <div className="aem-kpi">
-            <div className="label">今日已入厂</div>
-            <div className="value">{stats.entered}<span className="unit">辆</span></div>
-          </div>
-          <div className={`aem-kpi ${stats.overtime > 0 ? 'warn' : ''}`}>
-            <div className="label">等待超 30 分钟</div>
-            <div className="value">{stats.overtime}<span className="unit">辆</span></div>
-          </div>
-          <div className="aem-kpi">
-            <div className="label">今日抽检</div>
-            <div className="value">{stats.inspect}<span className="unit">次</span></div>
-          </div>
-          <div className={`aem-kpi ${stats.exception > 0 ? 'alarm' : ''}`}>
-            <div className="label">今日异常</div>
-            <div className="value">{stats.exception}<span className="unit">条</span></div>
-          </div>
-          <div className="aem-kpi">
-            <div className="label">平均等待</div>
-            <div className="value">{stats.avgWait}<span className="unit">分钟</span></div>
-          </div>
-        </section>
 
         <div className="aem-body">
           {visibleGates.map((gate) => (
             <GatePointCard
               key={gate.id}
               gate={gate}
+              systemName={system.name}
               clock={formatClock(now)}
               logs={logs.filter((item) => item.gateId === gate.id)}
               records={records.filter((item) => item.gateId === gate.id)}
@@ -301,8 +247,8 @@ const AutoEntryMonitor: React.FC = () => {
 
         <section className="aem-queue">
           <div className="aem-queue-hd">
-            <h2>{channel.name}排队车辆</h2>
-            <span style={{ fontSize: 12, color: 'rgba(0,0,0,0.45)' }}>按排队序号展示，超时车辆红色标识</span>
+            <h2>{system.name}排队车辆</h2>
+            <span className="aem-queue-sub">{systemHint} · 按排队序号展示，超时车辆红色标识</span>
           </div>
           <div className="aem-queue-bd">
             <Table
@@ -311,7 +257,7 @@ const AutoEntryMonitor: React.FC = () => {
               pagination={false}
               columns={queueColumns}
               dataSource={queueList}
-              locale={{ emptyText: '当前通道暂无排队车辆' }}
+              locale={{ emptyText: '当前系统暂无排队车辆' }}
             />
           </div>
         </section>

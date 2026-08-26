@@ -54,48 +54,46 @@
   white-space: nowrap;
 }
 
-.aem-kpis {
-  display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: 10px;
-  padding: 0 20px 12px;
-}
-
-.aem-kpi {
-  background: #fff;
-  border: 1px solid #f0f0f0;
-  border-radius: 8px;
-  padding: 10px 14px 12px;
-  min-width: 0;
-}
-
-.aem-kpi .label {
-  font-size: 12px;
-  color: rgba(0, 0, 0, 0.45);
-}
-
-.aem-kpi .value {
-  margin-top: 4px;
-  font-size: 22px;
-  font-weight: 650;
-  font-variant-numeric: tabular-nums;
+.aem-system-switch .ant-segmented-item-label {
+  min-height: 36px;
   line-height: 1.2;
-  color: rgba(0, 0, 0, 0.88);
+  padding: 4px 12px;
 }
 
-.aem-kpi .unit {
-  margin-left: 4px;
-  font-size: 12px;
-  font-weight: 400;
+.aem-system-opt {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.aem-system-name {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.aem-system-gates {
+  font-size: 11px;
   color: rgba(0, 0, 0, 0.45);
+  font-variant-numeric: tabular-nums;
 }
 
-.aem-kpi.warn .value {
-  color: #d48806;
+.aem-gate-system {
+  display: inline-block;
+  margin-right: 8px;
+  padding: 1px 6px;
+  font-size: 11px;
+  font-weight: 500;
+  color: #1677ff;
+  background: #e6f4ff;
+  border: 1px solid #91caff;
+  border-radius: 4px;
+  vertical-align: middle;
 }
 
-.aem-kpi.alarm .value {
-  color: #cf1322;
+.aem-queue-sub {
+  font-size: 12px;
+  color: rgba(0, 0, 0, 0.45);
 }
 
 .aem-body {
@@ -416,8 +414,8 @@
 }
 
 @media (max-width: 1400px) {
-  .aem-kpis {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+  .aem-gate-bd {
+    grid-template-columns: minmax(220px, 0.9fr) minmax(260px, 1.1fr);
   }
 }
 
@@ -435,9 +433,6 @@
 }
 
 @media (max-width: 760px) {
-  .aem-kpis {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
   .aem-head,
   .aem-head-tools {
     flex-direction: column;

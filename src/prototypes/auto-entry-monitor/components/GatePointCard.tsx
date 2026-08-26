@@ -25,12 +25,14 @@ function StatusTag({ status }: { status: DeviceStatus }) {
 
 export default function GatePointCard({
   gate,
+  systemName,
   logs,
   records,
   clock,
   onToggleService,
 }: {
   gate: GatePoint;
+  systemName: string;
   logs: RunLog[];
   records: EntryRecord[];
   clock: string;
@@ -55,7 +57,10 @@ export default function GatePointCard({
     <section className="aem-gate">
       <div className="aem-gate-hd">
         <div>
-          <h2>{gate.name}</h2>
+          <h2>
+            <span className="aem-gate-system">{systemName}</span>
+            {gate.name}
+          </h2>
           <div className="aem-gate-meta" style={{ marginTop: 6 }}>
             <StatusTag status={pointStatus} />
             <span style={{ fontSize: 12, color: 'rgba(0,0,0,0.45)' }}>

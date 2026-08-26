@@ -19,6 +19,7 @@ import {
   Space,
   Table,
   Tag,
+  Tooltip,
   message,
 } from 'antd';
 import {
@@ -27,7 +28,7 @@ import {
   IdcardOutlined,
   PlusSquareOutlined,
   QrcodeOutlined,
-  SafetyCertificateOutlined,
+  QuestionCircleOutlined,
   ScanOutlined,
 } from '@ant-design/icons';
 import zhCN from 'antd/locale/zh_CN';
@@ -48,18 +49,18 @@ import {
   findPreEntry,
   mineCardSample,
   nextSerial,
-  yunyiExpiredSample,
-  yunyiSample,
   type CoalPlan,
   type EntryRecord,
   type PreEntryVehicle,
   type SiteConfig,
 } from './data';
 import { applyPlan, isYunyiFresh, parseMineCard, parseYunyi } from './parse';
-import AllowEntryDrawer from './components/AllowEntryDrawer';
+import AllowEntryDrawer, { ALLOW_ENTRY_TOOLTIP } from './components/AllowEntryDrawer';
 import PlanSelectModal from './components/PlanSelectModal';
+import PlateInput from './components/PlateInput';
 import ScanModal, { type ScanKind } from './components/ScanModal';
 import UnderlineField from './components/UnderlineField';
+import YunyiScanModal from './components/YunyiScanModal';
 
 interface FormValues {
   plate?: string;
@@ -68,7 +69,6 @@ interface FormValues {
   coalType?: string;
   transporter?: string;
   productName?: string;
-  vehicleCard?: string;
   gross?: number | null;
   tare?: number | null;
   net?: number | null;
@@ -78,7 +78,6 @@ interface FormValues {
   weighPos?: string;
   unloadArea?: string;
   sampleMethod?: string;
-  entryCard?: string;
   planId?: string;
 }
 
@@ -89,7 +88,6 @@ const emptyForm = (): FormValues => ({
   coalType: undefined,
   transporter: undefined,
   productName: undefined,
-  vehicleCard: undefined,
   gross: null,
   tare: null,
   net: null,
@@ -99,7 +97,6 @@ const emptyForm = (): FormValues => ({
   weighPos: undefined,
   unloadArea: undefined,
   sampleMethod: '机械采样',
-  entryCard: undefined,
   planId: undefined,
 });
 
@@ -114,9 +111,10 @@ const ManualEntryRegistration: React.FC = () => {
   const [records, setRecords] = useState<EntryRecord[]>(INITIAL_RECORDS);
   const [planOpen, setPlanOpen] = useState(false);
   const [allowOpen, setAllowOpen] = useState(false);
+  const [yunyiScanOpen, setYunyiScanOpen] = useState(false);
   const [scan, setScan] = useState<{ open: boolean; kind: ScanKind; loading: boolean }>({
     open: false,
-    kind: 'yunyi',
+    kind: 'plan-qr',
     loading: false,
   });
   const [view, setView] = useState<EntryRecord | null>(null);
@@ -131,13 +129,10 @@ const ManualEntryRegistration: React.FC = () => {
 
   const fillPlan = (plan: CoalPlan, withWeights: boolean) => {
     const base = applyPlan(plan);
-    const preHit = vehicles.find((v) => v.plate === plan.plate);
     setValues((prev) => ({
       ...prev,
       ...base,
       shipTime: plan.shipTime ? dayjs(plan.shipTime) : null,
-      vehicleCard: preHit?.vehicleCard || prev.vehicleCard,
-      entryCard: preHit?.entryCard || prev.entryCard || (site.ENABLE_ENTER_CARD ? 'YC-TMP-8821' : undefined),
       sampleMethod: prev.sampleMethod || '机械采样',
       samplePos: prev.samplePos || SAMPLE_POSITIONS[0],
       weighPos: prev.weighPos || WEIGH_POSITIONS[0],
@@ -154,6 +149,14 @@ const ManualEntryRegistration: React.FC = () => {
   };
 
   const openScan = (kind: ScanKind) => {
+    if (kind === 'yunyi') {
+      setScanBusy('yunyi');
+      window.setTimeout(() => {
+        setScanBusy(null);
+        setYunyiScanOpen(true);
+      }, 450);
+      return;
+    }
     setScanBusy(kind);
     window.setTimeout(() => {
       setScanBusy(null);
@@ -169,7 +172,7 @@ const ManualEntryRegistration: React.FC = () => {
 
   const loadPreEntryWeights = () => {
     if (!values.plate?.trim()) {
-      message.warning('请先通过允许入厂或扫码回填车牌');
+      message.warning('请先输入或选择车牌号码');
       return;
     }
     const plate = values.plate.trim();
@@ -181,6 +184,28 @@ const ManualEntryRegistration: React.FC = () => {
     }
     fillPlan(plan, true);
     message.success('已获取预入厂矿发信息');
+  };
+
+  const fillFromPlate = (plate: string) => {
+    const hit = vehicles.find((v) => v.plate === plate) ?? findPreEntry(plate);
+    const plan = hit ? findPlan(hit.planId) : findPlanByPlate(plate);
+    if (plan) {
+      const withWeights = shouldFillWeights(site, 'pre') || shouldFillWeights(site, 'plan');
+      const base = applyPlan(plan);
+      setValues((prev) => ({
+        ...prev,
+        ...base,
+        plate,
+        shipTime: plan.shipTime ? dayjs(plan.shipTime) : null,
+        sampleMethod: prev.sampleMethod || '机械采样',
+        samplePos: prev.samplePos || SAMPLE_POSITIONS[0],
+        weighPos: prev.weighPos || WEIGH_POSITIONS[0],
+        ...(withWeights ? { gross: plan.gross, tare: plan.tare, net: plan.net } : {}),
+      }));
+      message.success(`已加载 ${plate} 关联信息`);
+    } else {
+      patch({ plate });
+    }
   };
 
   const handleScan = (raw: string) => {
@@ -195,41 +220,6 @@ const ManualEntryRegistration: React.FC = () => {
       message.success('计划二维码已回填');
       return;
     }
-    if (scan.kind === 'yunyi') {
-      const parsed = parseYunyi(raw);
-      if (!parsed) {
-        message.error('云驿二维码格式无法解析');
-        return;
-      }
-      if (!isYunyiFresh(parsed.qrTime)) {
-        message.error('二维码失效，请刷新！');
-        return;
-      }
-      const plan = findPlan(parsed.planId);
-      if (!plan) {
-        message.error('未查询到入厂计划信息');
-        return;
-      }
-      const preHit = vehicles.find((v) => v.plate === parsed.plate || v.plate === plan.plate);
-      const base = applyPlan(plan);
-      setValues((prev) => ({
-        ...prev,
-        ...base,
-        plate: parsed.plate,
-        shipTime: parsed.stationTime ? dayjs(parsed.stationTime) : dayjs(plan.shipTime),
-        vehicleCard: preHit?.vehicleCard || prev.vehicleCard,
-        entryCard: preHit?.entryCard || prev.entryCard || (site.ENABLE_ENTER_CARD ? 'YC-TMP-8821' : undefined),
-        sampleMethod: prev.sampleMethod || '机械采样',
-        samplePos: prev.samplePos || SAMPLE_POSITIONS[0],
-        weighPos: prev.weighPos || WEIGH_POSITIONS[0],
-        ...(shouldFillWeights(site, 'yunyi')
-          ? { gross: parsed.gross, tare: parsed.tare, net: parsed.net }
-          : {}),
-      }));
-      setScan((s) => ({ ...s, open: false }));
-      message.success('云驿二维码已回填');
-      return;
-    }
     const card = parseMineCard(raw);
     if (!card) {
       message.error('矿发卡内容无法解析');
@@ -242,15 +232,12 @@ const ManualEntryRegistration: React.FC = () => {
         message.error('未查询到入厂计划信息');
         return;
       }
-      const preHit = vehicles.find((v) => v.plate === card.cardPlate || v.plate === plan.plate);
       const base = applyPlan(plan);
       setValues((prev) => ({
         ...prev,
         ...base,
         plate: formPlate || card.cardPlate,
         shipTime: plan.shipTime ? dayjs(plan.shipTime) : null,
-        vehicleCard: preHit?.vehicleCard || prev.vehicleCard,
-        entryCard: preHit?.entryCard || prev.entryCard || (site.ENABLE_ENTER_CARD ? 'YC-TMP-8821' : undefined),
         sampleMethod: prev.sampleMethod || '机械采样',
         samplePos: prev.samplePos || SAMPLE_POSITIONS[0],
         weighPos: prev.weighPos || WEIGH_POSITIONS[0],
@@ -278,40 +265,49 @@ const ManualEntryRegistration: React.FC = () => {
     applyCard();
   };
 
-  const handleAllow = (plate: string) => {
-    setVehicles((list) => list.map((v) => (v.plate === plate ? { ...v, permit: 'allowed' } : v)));
-    message.success(`${plate} 已更新为允许入厂`);
+  const handleYunyiScan = (raw: string) => {
+    const parsed = parseYunyi(raw);
+    if (!parsed) {
+      message.error('云驿二维码格式无法解析');
+      return;
+    }
+    if (!isYunyiFresh(parsed.qrTime)) {
+      message.error('二维码失效，请刷新！');
+      return;
+    }
+    const plan = findPlan(parsed.planId);
+    if (!plan) {
+      message.error('未查询到入厂计划信息');
+      return;
+    }
+    const base = applyPlan(plan);
+    setValues((prev) => ({
+      ...prev,
+      ...base,
+      plate: parsed.plate,
+      shipTime: parsed.stationTime ? dayjs(parsed.stationTime) : dayjs(plan.shipTime),
+      sampleMethod: prev.sampleMethod || '机械采样',
+      samplePos: prev.samplePos || SAMPLE_POSITIONS[0],
+      weighPos: prev.weighPos || WEIGH_POSITIONS[0],
+      ...(shouldFillWeights(site, 'yunyi')
+        ? { gross: parsed.gross, tare: parsed.tare, net: parsed.net }
+        : {}),
+    }));
+    message.success('云驿二维码已识别并加载车辆信息');
   };
 
-  const fillFromPlate = (plate: string) => {
-    const hit = vehicles.find((v) => v.plate === plate) ?? findPreEntry(plate);
-    const plan = hit ? findPlan(hit.planId) : findPlanByPlate(plate);
-    if (plan) {
-      const withWeights = shouldFillWeights(site, 'pre') || shouldFillWeights(site, 'plan');
-      const base = applyPlan(plan);
-      const preHit = hit;
-      setValues((prev) => ({
-        ...prev,
-        ...base,
-        plate,
-        shipTime: plan.shipTime ? dayjs(plan.shipTime) : null,
-        vehicleCard: preHit?.vehicleCard || prev.vehicleCard,
-        entryCard: preHit?.entryCard || prev.entryCard || (site.ENABLE_ENTER_CARD ? 'YC-TMP-8821' : undefined),
-        sampleMethod: prev.sampleMethod || '机械采样',
-        samplePos: prev.samplePos || SAMPLE_POSITIONS[0],
-        weighPos: prev.weighPos || WEIGH_POSITIONS[0],
-        ...(withWeights ? { gross: plan.gross, tare: plan.tare, net: plan.net } : {}),
-      }));
-    } else {
-      patch({ plate });
-    }
+  const handleAllowConfirm = (reason: string) => {
+    const plate = values.plate?.trim();
+    if (!plate) return;
+    setVehicles((list) => list.map((v) => (v.plate === plate ? { ...v, permit: 'allowed' } : v)));
     setAllowOpen(false);
+    message.success(`${plate} 已人工允许入厂（${reason}）`);
   };
 
   const submit = () => {
     const plate = values.plate?.trim();
     if (!plate) {
-      message.error('请先回填车牌号码');
+      message.error('请先输入车牌号码');
       return;
     }
     if (values.net == null || Number.isNaN(Number(values.net))) {
@@ -330,19 +326,12 @@ const ManualEntryRegistration: React.FC = () => {
       message.error('缺少采样位或过衡位');
       return;
     }
-    if (site.ENABLE_ENTER_CARD && !values.entryCard) {
-      message.error('缺少入厂卡');
-      return;
-    }
     const permit = vehicles.find((v) => v.plate === plate);
     if (permit?.permit === 'forbidden') {
-      message.error('该车辆仍为禁止入厂登记，请先办理允许入厂');
+      message.error('该车辆仍为禁止入厂，请先办理允许入厂');
       setAllowOpen(true);
       return;
     }
-    const tempCard = values.entryCard?.startsWith('YC-TMP') ? values.entryCard : '';
-    const fixedCard = values.entryCard && !tempCard ? values.entryCard : '';
-    const uploaded = site.ENABLE_ENTER_CARD ? tempCard || fixedCard || '' : '';
     const serialNo = nextSerial(records);
     const now = dayjs().format('YYYY-MM-DD HH:mm:ss');
     const row: EntryRecord = {
@@ -358,7 +347,7 @@ const ManualEntryRegistration: React.FC = () => {
       samplePos: values.samplePos || '—',
       enterAt: now,
       status: 'registered',
-      entryCard: uploaded,
+      entryCard: '',
       siteId: site.id,
     };
     setRecords((list) => [row, ...list]);
@@ -415,11 +404,6 @@ const ManualEntryRegistration: React.FC = () => {
 
   const scanSamples = useMemo(() => {
     if (scan.kind === 'plan-qr') return [{ label: '示例计划 ID', value: PLANS[0].id }];
-    if (scan.kind === 'yunyi')
-      return [
-        { label: '有效云驿码（蒙A90005）', value: yunyiSample() },
-        { label: '过期云驿码', value: yunyiExpiredSample() },
-      ];
     return [
       { label: '矿发卡 蒙A90005', value: mineCardSample('蒙A90005') },
       { label: '矿发卡 湘C92223（用于车牌不一致）', value: mineCardSample('湘C92223') },
@@ -428,6 +412,14 @@ const ManualEntryRegistration: React.FC = () => {
 
   const weightText = (n?: number | null) =>
     n === undefined || n === null || Number.isNaN(Number(n)) ? undefined : `${Number(n)} t`;
+
+  const permitNode = () => {
+    if (!values.plate?.trim() || !livePre) return undefined;
+    if (livePre.permit === 'allowed') return <Tag color="success">是</Tag>;
+    return <Tag color="error">否</Tag>;
+  };
+
+  const allowDisabled = !values.plate?.trim() || livePre?.permit !== 'forbidden';
 
   return (
     <ConfigProvider locale={zhCN} componentSize="small">
@@ -452,14 +444,7 @@ const ManualEntryRegistration: React.FC = () => {
 
         <section className="mer-card mer-form-card">
           <div className="mer-card-hd">
-            <h2>
-              登记入厂信息
-              {livePre?.permit === 'forbidden' ? (
-                <Tag color="error" style={{ marginLeft: 8 }}>
-                  {livePre.plate} 禁止入厂，请先允许入厂
-                </Tag>
-              ) : null}
-            </h2>
+            <h2>登记入厂信息</h2>
             <div className="mer-card-actions">
               {(site.GET_PLAN_MSG === 1 || site.GET_PLAN_MSG === 2) && (
                 <Button icon={<PlusSquareOutlined />} onClick={() => setPlanOpen(true)}>
@@ -484,9 +469,6 @@ const ManualEntryRegistration: React.FC = () => {
               <Button icon={<ScanOutlined />} loading={scanBusy === 'yunyi'} onClick={() => openScan('yunyi')}>
                 扫描云驿二维码
               </Button>
-              <Button type="primary" ghost icon={<SafetyCertificateOutlined />} onClick={() => setAllowOpen(true)}>
-                允许入厂
-              </Button>
             </div>
           </div>
 
@@ -494,7 +476,11 @@ const ManualEntryRegistration: React.FC = () => {
             <div className="mer-form-grid">
               <div>
                 <p className="mer-col-title">来煤信息</p>
-                <UnderlineField label="车牌号码" value={values.plate} required />
+                <PlateInput
+                  value={values.plate}
+                  onChange={(plate) => patch({ plate })}
+                  onSelect={fillFromPlate}
+                />
                 <UnderlineField label="供应商" value={values.supplier} />
                 <UnderlineField label="矿点" value={values.mine} />
                 <UnderlineField label="煤种" value={values.coalType} />
@@ -503,7 +489,6 @@ const ManualEntryRegistration: React.FC = () => {
               </div>
               <div>
                 <p className="mer-col-title">矿发信息</p>
-                <UnderlineField label="车辆卡号" value={values.vehicleCard} />
                 <UnderlineField label="矿发毛重" value={weightText(values.gross)} />
                 <UnderlineField label="矿发皮重" value={weightText(values.tare)} />
                 <UnderlineField label="矿发净重" value={weightText(values.net)} required />
@@ -520,11 +505,15 @@ const ManualEntryRegistration: React.FC = () => {
                 <UnderlineField label="采样位" value={values.samplePos} required={site.SAMPLE_MEASURE_EDIT === 1} />
                 <UnderlineField label="过衡位" value={values.weighPos} required={site.SAMPLE_MEASURE_EDIT === 1} />
                 <UnderlineField label="卸煤区域" value={values.unloadArea} required />
-                {site.ENABLE_ENTER_CARD ? (
-                  <UnderlineField label="入厂卡" value={values.entryCard} required />
-                ) : (
-                  <UnderlineField label="入厂卡" value="本入厂点未启用入厂卡" />
-                )}
+                <div className="mer-ufield">
+                  <span className="mer-ufield-label">允许入厂</span>
+                  <span className="mer-ufield-value mer-ufield-permit">
+                    {permitNode() ?? <span className="is-empty">—</span>}
+                    <Tooltip title={ALLOW_ENTRY_TOOLTIP}>
+                      <QuestionCircleOutlined className="mer-permit-help" aria-label="允许入厂说明" />
+                    </Tooltip>
+                  </span>
+                </div>
               </div>
             </div>
           </div>
@@ -533,6 +522,9 @@ const ManualEntryRegistration: React.FC = () => {
             <Space>
               <Button type="primary" onClick={submit}>
                 确认登记
+              </Button>
+              <Button disabled={allowDisabled} onClick={() => setAllowOpen(true)}>
+                允许入厂
               </Button>
               <Button icon={<ClearOutlined />} onClick={() => setValues(emptyForm())}>
                 清空
@@ -561,10 +553,19 @@ const ManualEntryRegistration: React.FC = () => {
         <PlanSelectModal open={planOpen} onClose={() => setPlanOpen(false)} onPick={handlePlanPick} />
         <AllowEntryDrawer
           open={allowOpen}
-          vehicles={vehicles}
+          plate={values.plate}
+          supplier={values.supplier}
+          gross={values.gross}
+          tare={values.tare}
+          net={values.net}
+          permit={livePre?.permit}
           onClose={() => setAllowOpen(false)}
-          onAllow={handleAllow}
-          onFill={fillFromPlate}
+          onConfirm={handleAllowConfirm}
+        />
+        <YunyiScanModal
+          open={yunyiScanOpen}
+          onClose={() => setYunyiScanOpen(false)}
+          onSuccess={handleYunyiScan}
         />
         <ScanModal
           open={scan.open}
@@ -586,7 +587,6 @@ const ManualEntryRegistration: React.FC = () => {
               <Descriptions.Item label="采样 / 过衡">
                 {view.samplePos} / {view.weighPos}
               </Descriptions.Item>
-              <Descriptions.Item label="入厂卡">{view.entryCard || '—'}</Descriptions.Item>
               <Descriptions.Item label="时间">{view.enterAt}</Descriptions.Item>
             </Descriptions>
           ) : null}

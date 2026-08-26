@@ -259,6 +259,22 @@ export const findPlanByPlate = (plate: string) =>
 export const findPreEntry = (plate: string) =>
   PRE_ENTRIES.find((p) => p.plate.replace(/\s/g, '') === plate.replace(/\s/g, ''));
 
+/** 输入三位及以上时，按车牌前缀/包含关系联想候选 */
+export const searchPlates = (query: string) => {
+  const key = query.trim().replace(/\s/g, '').toUpperCase();
+  if (key.length < 3) return [];
+  const hits = new Set<string>();
+  for (const plan of PLANS) {
+    const plate = plan.plate.replace(/\s/g, '').toUpperCase();
+    if (plate.includes(key)) hits.add(plan.plate);
+  }
+  for (const pre of PRE_ENTRIES) {
+    const plate = pre.plate.replace(/\s/g, '').toUpperCase();
+    if (plate.includes(key)) hits.add(pre.plate);
+  }
+  return Array.from(hits);
+};
+
 export const nextSerial = (records: EntryRecord[]) => {
   const seq = records.length + 19;
   return `RCJ20260825${String(seq).padStart(4, '0')}`;

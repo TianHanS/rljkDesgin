@@ -100,6 +100,13 @@ export const SITES: SiteConfig[] = [
   },
 ];
 
+export const SITE_PRESENTATION: Record<string, { abbr: string; hint: string }> = {
+  south: { abbr: '南门', hint: '主通道入厂 · 支持选择计划' },
+  north: { abbr: '北门', hint: '按车牌匹配 · 预入厂获取' },
+  east: { abbr: '东门', hint: '读矿发卡 · 矿发读卡' },
+  west: { abbr: '西门', hint: '扫计划码 · 云驿扫码' },
+};
+
 export const PLAN_MODE_LABEL: Record<PlanGetMode, string> = {
   1: '人工选择计划',
   2: '扫描计划二维码',

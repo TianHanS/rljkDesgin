@@ -15,7 +15,6 @@ import {
   Descriptions,
   Drawer,
   Modal,
-  Select,
   Space,
   Table,
   Tag,
@@ -23,6 +22,7 @@ import {
   message,
 } from 'antd';
 import {
+  ArrowLeftOutlined,
   ClearOutlined,
   CreditCardOutlined,
   IdcardOutlined,
@@ -56,6 +56,7 @@ import AllowEntryDrawer, { ALLOW_ENTRY_TOOLTIP } from './components/AllowEntryDr
 import PlanSelectModal from './components/PlanSelectModal';
 import PlateInput from './components/PlateInput';
 import ScanModal, { type ScanKind } from './components/ScanModal';
+import SiteSelectPanel from './components/SiteSelectPanel';
 import UnderlineField from './components/UnderlineField';
 import YunyiScanModal from './components/YunyiScanModal';
 
@@ -99,7 +100,7 @@ const emptyForm = (): FormValues => ({
 
 const ManualEntryRegistration: React.FC = () => {
   const [values, setValues] = useState<FormValues>(emptyForm);
-  const [siteId, setSiteId] = useState(SITES[0].id);
+  const [siteId, setSiteId] = useState<string | null>(null);
   const [vehicles, setVehicles] = useState<PreEntryVehicle[]>(() =>
     PRE_ENTRIES.map((v) => ({ ...v })),
   );
@@ -117,7 +118,7 @@ const ManualEntryRegistration: React.FC = () => {
   const [view, setView] = useState<EntryRecord | null>(null);
   const [scanBusy, setScanBusy] = useState<ScanKind | null>(null);
 
-  const site = SITES.find((s) => s.id === siteId) ?? SITES[0];
+  const site = siteId ? SITES.find((s) => s.id === siteId) : undefined;
   const livePre = values.plate
     ? vehicles.find((v) => v.plate.replace(/\s/g, '') === values.plate!.replace(/\s/g, ''))
     : undefined;
@@ -412,23 +413,42 @@ const ManualEntryRegistration: React.FC = () => {
 
   const allowDisabled = !values.plate?.trim() || livePre?.permit !== 'forbidden';
 
+  const backToSiteSelect = () => {
+    setSiteId(null);
+    setValues(emptyForm());
+  };
+
+  if (!siteId || !site) {
+    return (
+      <ConfigProvider locale={zhCN} componentSize="small">
+        <div className="mer-root mer-root-select">
+          <SiteSelectPanel
+            sites={SITES}
+            onSelect={(id) => {
+              setSiteId(id);
+              setValues(emptyForm());
+            }}
+          />
+        </div>
+      </ConfigProvider>
+    );
+  }
+
   return (
     <ConfigProvider locale={zhCN} componentSize="small">
       <div className="mer-root">
         <section className="mer-card mer-form-card">
           <div className="mer-card-hd">
-            <h2>登记入厂信息</h2>
+            <h2>
+              登记入厂信息
+              <Tag color="processing" className="mer-current-site">
+                {site.name}
+              </Tag>
+            </h2>
             <div className="mer-card-actions">
-              <span className="mer-site-label">入厂点</span>
-              <Select
-                style={{ width: 148 }}
-                value={siteId}
-                options={SITES.map((s) => ({ value: s.id, label: s.name }))}
-                onChange={(id) => {
-                  setSiteId(id);
-                  setValues(emptyForm());
-                }}
-              />
+              <Button type="link" icon={<ArrowLeftOutlined />} className="mer-switch-site" onClick={backToSiteSelect}>
+                切换登记点
+              </Button>
               {(site.GET_PLAN_MSG === 1 || site.GET_PLAN_MSG === 2) && (
                 <Button icon={<PlusSquareOutlined />} onClick={() => setPlanOpen(true)}>
                   选择计划

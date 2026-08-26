@@ -114,33 +114,55 @@ body,
 .mer-form-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0 16px;
+  gap: 0 24px;
 }
 
 .mer-col-title {
-  margin: 0 0 2px;
+  margin: 0 0 4px;
   font-size: 12px;
   font-weight: 650;
   color: rgba(0, 0, 0, 0.45);
 }
 
-.mer-card-bd .ant-form-item {
-  margin-bottom: 4px;
+.mer-ufield {
+  display: grid;
+  grid-template-columns: 80px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  min-height: 28px;
+  margin-bottom: 2px;
 }
 
-.mer-card-bd .ant-form-item-label {
-  padding: 0 8px 0 0 !important;
-  width: 80px;
-}
-
-.mer-card-bd .ant-form-item-label > label {
-  height: 24px;
+.mer-ufield-label {
   font-size: 13px;
+  color: rgba(0, 0, 0, 0.65);
+  text-align: right;
+  white-space: nowrap;
 }
 
-.mer-card-bd .ant-form-item-explain-error {
-  font-size: 11px;
-  min-height: 0;
+.mer-ufield-req .mer-ufield-label::before {
+  content: "*";
+  display: inline-block;
+  margin-inline-end: 4px;
+  color: #ff4d4f;
+  font-family: SimSun, sans-serif;
+}
+
+.mer-ufield-value {
+  min-width: 0;
+  height: 28px;
+  line-height: 28px;
+  padding: 0 2px;
+  border-bottom: 1px solid #d9d9d9;
+  font-size: 13px;
+  color: rgba(0, 0, 0, 0.88);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mer-ufield-value.is-empty {
+  color: rgba(0, 0, 0, 0.25);
 }
 
 .mer-footer-actions {

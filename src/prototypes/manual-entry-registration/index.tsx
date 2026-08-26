@@ -12,12 +12,8 @@ import React, { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
   Button,
   ConfigProvider,
-  DatePicker,
   Descriptions,
   Drawer,
-  Form,
-  Input,
-  InputNumber,
   Modal,
   Select,
   Space,
@@ -44,11 +40,8 @@ import {
   PLAN_MODE_LABEL,
   PLANS,
   PRE_ENTRIES,
-  SAMPLE_METHODS,
   SAMPLE_POSITIONS,
   SITES,
-  TRANSPORTERS,
-  UNLOAD_AREAS,
   WEIGH_POSITIONS,
   findPlan,
   findPlanByPlate,
@@ -66,6 +59,7 @@ import { applyPlan, isYunyiFresh, parseMineCard, parseYunyi } from './parse';
 import AllowEntryDrawer from './components/AllowEntryDrawer';
 import PlanSelectModal from './components/PlanSelectModal';
 import ScanModal, { type ScanKind } from './components/ScanModal';
+import UnderlineField from './components/UnderlineField';
 
 interface FormValues {
   plate?: string;
@@ -88,12 +82,29 @@ interface FormValues {
   planId?: string;
 }
 
-const weightRule = [
-  { type: 'number' as const, min: 0, max: 199.999, message: '须为小于 200 的小数' },
-];
+const emptyForm = (): FormValues => ({
+  plate: undefined,
+  supplier: undefined,
+  mine: undefined,
+  coalType: undefined,
+  transporter: undefined,
+  productName: undefined,
+  vehicleCard: undefined,
+  gross: null,
+  tare: null,
+  net: null,
+  shipTime: null,
+  station: undefined,
+  samplePos: undefined,
+  weighPos: undefined,
+  unloadArea: undefined,
+  sampleMethod: '机械采样',
+  entryCard: undefined,
+  planId: undefined,
+});
 
 const ManualEntryRegistration: React.FC = () => {
-  const [form] = Form.useForm<FormValues>();
+  const [values, setValues] = useState<FormValues>(emptyForm);
   const [siteId, setSiteId] = useState(SITES[0].id);
   const [vehicles, setVehicles] = useState<PreEntryVehicle[]>(() =>
     PRE_ENTRIES.map((v) => ({ ...v })),
@@ -112,29 +123,33 @@ const ManualEntryRegistration: React.FC = () => {
   const [scanBusy, setScanBusy] = useState<ScanKind | null>(null);
 
   const site = SITES.find((s) => s.id === siteId) ?? SITES[0];
-  const plateWatch = Form.useWatch('plate', form);
-  const livePre = plateWatch
-    ? vehicles.find((v) => v.plate.replace(/\s/g, '') === plateWatch.replace(/\s/g, ''))
+  const livePre = values.plate
+    ? vehicles.find((v) => v.plate.replace(/\s/g, '') === values.plate!.replace(/\s/g, ''))
     : undefined;
+
+  const patch = (next: Partial<FormValues>) => setValues((prev) => ({ ...prev, ...next }));
 
   const fillPlan = (plan: CoalPlan, withWeights: boolean) => {
     const base = applyPlan(plan);
     const preHit = vehicles.find((v) => v.plate === plan.plate);
-    form.setFieldsValue({
+    setValues((prev) => ({
+      ...prev,
       ...base,
       shipTime: plan.shipTime ? dayjs(plan.shipTime) : null,
-      vehicleCard: preHit?.vehicleCard,
-      entryCard: preHit?.entryCard || form.getFieldValue('entryCard'),
-      sampleMethod: form.getFieldValue('sampleMethod') || '机械采样',
+      vehicleCard: preHit?.vehicleCard || prev.vehicleCard,
+      entryCard: preHit?.entryCard || prev.entryCard || (site.ENABLE_ENTER_CARD ? 'YC-TMP-8821' : undefined),
+      sampleMethod: prev.sampleMethod || '机械采样',
+      samplePos: prev.samplePos || SAMPLE_POSITIONS[0],
+      weighPos: prev.weighPos || WEIGH_POSITIONS[0],
       ...(withWeights ? { gross: plan.gross, tare: plan.tare, net: plan.net } : {}),
-    });
+    }));
   };
 
   const shouldFillWeights = (cfg: SiteConfig, from: 'plan' | 'pre' | 'card' | 'yunyi') => {
     if (cfg.GET_ORIGINAL_MSG === 1) return from === 'pre' || from === 'plan';
-    if (cfg.GET_ORIGINAL_MSG === 2) return from === 'card';
-    if (cfg.GET_ORIGINAL_MSG === 3) return false;
-    if (cfg.GET_ORIGINAL_MSG === 4) return from === 'yunyi';
+    if (cfg.GET_ORIGINAL_MSG === 2) return from === 'card' || from === 'plan';
+    if (cfg.GET_ORIGINAL_MSG === 3) return from === 'plan' || from === 'pre';
+    if (cfg.GET_ORIGINAL_MSG === 4) return from === 'yunyi' || from === 'plan';
     return false;
   };
 
@@ -152,25 +167,12 @@ const ManualEntryRegistration: React.FC = () => {
     message.success(`已回填计划 ${plan.serialNo}`);
   };
 
-  const handlePlateMatch = () => {
-    if (site.GET_PLAN_MSG !== 3) return;
-    const plate = (form.getFieldValue('plate') as string | undefined)?.trim();
-    if (!plate) return;
-    const plan = findPlanByPlate(plate);
-    if (!plan) {
-      message.warning('未匹配到来煤计划');
-      return;
-    }
-    fillPlan(plan, shouldFillWeights(site, 'plan'));
-    message.success(`已按车牌匹配计划 ${plan.serialNo}`);
-  };
-
   const loadPreEntryWeights = () => {
-    const plate = (form.getFieldValue('plate') as string | undefined)?.trim();
-    if (!plate) {
-      message.warning('请先填写车牌');
+    if (!values.plate?.trim()) {
+      message.warning('请先通过允许入厂或扫码回填车牌');
       return;
     }
+    const plate = values.plate.trim();
     const hit = vehicles.find((v) => v.plate === plate) ?? findPreEntry(plate);
     const plan = hit ? findPlan(hit.planId) : findPlanByPlate(plate);
     if (!plan) {
@@ -208,14 +210,22 @@ const ManualEntryRegistration: React.FC = () => {
         message.error('未查询到入厂计划信息');
         return;
       }
-      fillPlan(plan, false);
-      form.setFieldsValue({
+      const preHit = vehicles.find((v) => v.plate === parsed.plate || v.plate === plan.plate);
+      const base = applyPlan(plan);
+      setValues((prev) => ({
+        ...prev,
+        ...base,
         plate: parsed.plate,
         shipTime: parsed.stationTime ? dayjs(parsed.stationTime) : dayjs(plan.shipTime),
+        vehicleCard: preHit?.vehicleCard || prev.vehicleCard,
+        entryCard: preHit?.entryCard || prev.entryCard || (site.ENABLE_ENTER_CARD ? 'YC-TMP-8821' : undefined),
+        sampleMethod: prev.sampleMethod || '机械采样',
+        samplePos: prev.samplePos || SAMPLE_POSITIONS[0],
+        weighPos: prev.weighPos || WEIGH_POSITIONS[0],
         ...(shouldFillWeights(site, 'yunyi')
           ? { gross: parsed.gross, tare: parsed.tare, net: parsed.net }
           : {}),
-      });
+      }));
       setScan((s) => ({ ...s, open: false }));
       message.success('云驿二维码已回填');
       return;
@@ -225,22 +235,33 @@ const ManualEntryRegistration: React.FC = () => {
       message.error('矿发卡内容无法解析');
       return;
     }
-    const formPlate = ((form.getFieldValue('plate') as string | undefined) || '').trim();
+    const formPlate = (values.plate || '').trim();
     const applyCard = () => {
       const plan = findPlan(card.planId);
       if (!plan) {
         message.error('未查询到入厂计划信息');
         return;
       }
-      fillPlan(plan, shouldFillWeights(site, 'card'));
-      if (shouldFillWeights(site, 'card')) {
-        form.setFieldsValue({
-          gross: card.gross,
-          tare: card.tare,
-          net: Number((card.gross - card.tare).toFixed(3)),
-        });
-      }
-      if (!formPlate) form.setFieldsValue({ plate: card.cardPlate });
+      const preHit = vehicles.find((v) => v.plate === card.cardPlate || v.plate === plan.plate);
+      const base = applyPlan(plan);
+      setValues((prev) => ({
+        ...prev,
+        ...base,
+        plate: formPlate || card.cardPlate,
+        shipTime: plan.shipTime ? dayjs(plan.shipTime) : null,
+        vehicleCard: preHit?.vehicleCard || prev.vehicleCard,
+        entryCard: preHit?.entryCard || prev.entryCard || (site.ENABLE_ENTER_CARD ? 'YC-TMP-8821' : undefined),
+        sampleMethod: prev.sampleMethod || '机械采样',
+        samplePos: prev.samplePos || SAMPLE_POSITIONS[0],
+        weighPos: prev.weighPos || WEIGH_POSITIONS[0],
+        ...(shouldFillWeights(site, 'card')
+          ? {
+              gross: card.gross,
+              tare: card.tare,
+              net: Number((card.gross - card.tare).toFixed(3)),
+            }
+          : {}),
+      }));
       setScan((s) => ({ ...s, open: false }));
       message.success('矿发卡已回填');
     };
@@ -265,55 +286,88 @@ const ManualEntryRegistration: React.FC = () => {
   const fillFromPlate = (plate: string) => {
     const hit = vehicles.find((v) => v.plate === plate) ?? findPreEntry(plate);
     const plan = hit ? findPlan(hit.planId) : findPlanByPlate(plate);
-    if (plan) fillPlan(plan, shouldFillWeights(site, 'pre') || shouldFillWeights(site, 'plan'));
-    form.setFieldsValue({ plate });
+    if (plan) {
+      const withWeights = shouldFillWeights(site, 'pre') || shouldFillWeights(site, 'plan');
+      const base = applyPlan(plan);
+      const preHit = hit;
+      setValues((prev) => ({
+        ...prev,
+        ...base,
+        plate,
+        shipTime: plan.shipTime ? dayjs(plan.shipTime) : null,
+        vehicleCard: preHit?.vehicleCard || prev.vehicleCard,
+        entryCard: preHit?.entryCard || prev.entryCard || (site.ENABLE_ENTER_CARD ? 'YC-TMP-8821' : undefined),
+        sampleMethod: prev.sampleMethod || '机械采样',
+        samplePos: prev.samplePos || SAMPLE_POSITIONS[0],
+        weighPos: prev.weighPos || WEIGH_POSITIONS[0],
+        ...(withWeights ? { gross: plan.gross, tare: plan.tare, net: plan.net } : {}),
+      }));
+    } else {
+      patch({ plate });
+    }
     setAllowOpen(false);
   };
 
-  const submit = async () => {
-    try {
-      const values = await form.validateFields();
-      const plate = values.plate!.trim();
-      const permit = vehicles.find((v) => v.plate === plate);
-      if (permit?.permit === 'forbidden') {
-        message.error('该车辆仍为禁止入厂登记，请先办理允许入厂');
-        setAllowOpen(true);
-        return;
-      }
-      const tempCard = values.entryCard?.startsWith('YC-TMP') ? values.entryCard : '';
-      const fixedCard = values.entryCard && !tempCard ? values.entryCard : '';
-      const uploaded = site.ENABLE_ENTER_CARD ? tempCard || fixedCard || '' : '';
-      const serialNo = nextSerial(records);
-      const now = dayjs().format('YYYY-MM-DD HH:mm:ss');
-      const row: EntryRecord = {
-        id: `R${Date.now()}`,
-        serialNo,
-        plate,
-        supplier: values.supplier || '—',
-        mine: values.mine || '—',
-        coalType: values.coalType || '—',
-        sampleMethod: values.sampleMethod || '机械采样',
-        net: Number(values.net),
-        weighPos: values.weighPos || '—',
-        samplePos: values.samplePos || '—',
-        enterAt: now,
-        status: 'registered',
-        entryCard: uploaded,
-        siteId: site.id,
-      };
-      setRecords((list) => [row, ...list]);
-      form.resetFields();
-      form.setFieldValue('sampleMethod', '机械采样');
-      message.success(
-        `登记成功。道闸已抬杆，LED「${plate} 登记成功」，广播「${plate} 请入厂，前往${values.samplePos || '采样位'} ${values.weighPos || '过衡位'}」`,
-      );
-    } catch (err) {
-      const first = (err as { errorFields?: { errors: string[] }[] }).errorFields?.[0]?.errors?.[0];
-      message.error(first || '请完善必填项后再登记');
+  const submit = () => {
+    const plate = values.plate?.trim();
+    if (!plate) {
+      message.error('请先回填车牌号码');
+      return;
     }
+    if (values.net == null || Number.isNaN(Number(values.net))) {
+      message.error('缺少矿发净重，请先选择计划或扫码回填');
+      return;
+    }
+    if (!values.shipTime) {
+      message.error('缺少发站时间，请先选择计划或扫码回填');
+      return;
+    }
+    if (!values.unloadArea) {
+      message.error('缺少卸煤区域，请先选择计划或扫码回填');
+      return;
+    }
+    if (site.SAMPLE_MEASURE_EDIT === 1 && (!values.samplePos || !values.weighPos)) {
+      message.error('缺少采样位或过衡位');
+      return;
+    }
+    if (site.ENABLE_ENTER_CARD && !values.entryCard) {
+      message.error('缺少入厂卡');
+      return;
+    }
+    const permit = vehicles.find((v) => v.plate === plate);
+    if (permit?.permit === 'forbidden') {
+      message.error('该车辆仍为禁止入厂登记，请先办理允许入厂');
+      setAllowOpen(true);
+      return;
+    }
+    const tempCard = values.entryCard?.startsWith('YC-TMP') ? values.entryCard : '';
+    const fixedCard = values.entryCard && !tempCard ? values.entryCard : '';
+    const uploaded = site.ENABLE_ENTER_CARD ? tempCard || fixedCard || '' : '';
+    const serialNo = nextSerial(records);
+    const now = dayjs().format('YYYY-MM-DD HH:mm:ss');
+    const row: EntryRecord = {
+      id: `R${Date.now()}`,
+      serialNo,
+      plate,
+      supplier: values.supplier || '—',
+      mine: values.mine || '—',
+      coalType: values.coalType || '—',
+      sampleMethod: values.sampleMethod || '机械采样',
+      net: Number(values.net),
+      weighPos: values.weighPos || '—',
+      samplePos: values.samplePos || '—',
+      enterAt: now,
+      status: 'registered',
+      entryCard: uploaded,
+      siteId: site.id,
+    };
+    setRecords((list) => [row, ...list]);
+    setValues(emptyForm());
+    message.success(
+      `登记成功。道闸已抬杆，LED「${plate} 登记成功」，广播「${plate} 请入厂，前往${values.samplePos || '采样位'} ${values.weighPos || '过衡位'}」`,
+    );
   };
 
-  const sampleRequired = site.SAMPLE_MEASURE_EDIT === 1;
   const filteredRecords = records.filter((r) => r.siteId === site.id);
 
   useLayoutEffect(() => {
@@ -372,6 +426,9 @@ const ManualEntryRegistration: React.FC = () => {
     ];
   }, [scan.kind]);
 
+  const weightText = (n?: number | null) =>
+    n === undefined || n === null || Number.isNaN(Number(n)) ? undefined : `${Number(n)} t`;
+
   return (
     <ConfigProvider locale={zhCN} componentSize="small">
       <div className="mer-root">
@@ -387,8 +444,7 @@ const ManualEntryRegistration: React.FC = () => {
               options={SITES.map((s) => ({ value: s.id, label: s.name }))}
               onChange={(id) => {
                 setSiteId(id);
-                form.resetFields();
-                form.setFieldValue('sampleMethod', '机械采样');
+                setValues(emptyForm());
               }}
             />
           </div>
@@ -434,110 +490,51 @@ const ManualEntryRegistration: React.FC = () => {
             </div>
           </div>
 
-          <Form
-            form={form}
-            layout="horizontal"
-            colon={false}
-            initialValues={{ sampleMethod: '机械采样', gross: 0, tare: 0 }}
-            className="mer-card-bd"
-          >
-            <Form.Item name="planId" hidden>
-              <Input />
-            </Form.Item>
+          <div className="mer-card-bd">
             <div className="mer-form-grid">
               <div>
                 <p className="mer-col-title">来煤信息</p>
-                <Form.Item label="车牌号码" name="plate" rules={[{ required: true, message: '请输入车牌' }]}>
-                  <Input placeholder="输入或扫码回填" onBlur={handlePlateMatch} onPressEnter={handlePlateMatch} />
-                </Form.Item>
-                <Form.Item label="供应商" name="supplier">
-                  <Input placeholder="计划回显，可改" />
-                </Form.Item>
-                <Form.Item label="矿点" name="mine">
-                  <Input placeholder="计划回显，可改" />
-                </Form.Item>
-                <Form.Item label="煤种" name="coalType">
-                  <Input placeholder="计划回显，可改" />
-                </Form.Item>
-                <Form.Item label="运输单位" name="transporter">
-                  <Select showSearch allowClear options={TRANSPORTERS.map((t) => ({ value: t, label: t }))} />
-                </Form.Item>
-                <Form.Item label="品名" name="productName">
-                  <Input />
-                </Form.Item>
+                <UnderlineField label="车牌号码" value={values.plate} required />
+                <UnderlineField label="供应商" value={values.supplier} />
+                <UnderlineField label="矿点" value={values.mine} />
+                <UnderlineField label="煤种" value={values.coalType} />
+                <UnderlineField label="运输单位" value={values.transporter} />
+                <UnderlineField label="品名" value={values.productName} />
               </div>
               <div>
                 <p className="mer-col-title">矿发信息</p>
-                <Form.Item label="车辆卡号" name="vehicleCard">
-                  <Input />
-                </Form.Item>
-                <Form.Item label="矿发毛重" name="gross" rules={weightRule}>
-                  <InputNumber style={{ width: '100%' }} min={0} max={199.999} step={0.1} addonAfter="t" />
-                </Form.Item>
-                <Form.Item label="矿发皮重" name="tare" rules={weightRule}>
-                  <InputNumber style={{ width: '100%' }} min={0} max={199.999} step={0.1} addonAfter="t" />
-                </Form.Item>
-                <Form.Item
-                  label="矿发净重"
-                  name="net"
-                  rules={[{ required: true, message: '请输入净重' }, ...weightRule]}
-                >
-                  <InputNumber style={{ width: '100%' }} min={0} max={199.999} step={0.1} addonAfter="t" />
-                </Form.Item>
-                <Form.Item label="发站时间" name="shipTime" rules={[{ required: true, message: '请选择发站时间' }]}>
-                  <DatePicker showTime style={{ width: '100%' }} />
-                </Form.Item>
-                <Form.Item label="发站" name="station">
-                  <Input />
-                </Form.Item>
+                <UnderlineField label="车辆卡号" value={values.vehicleCard} />
+                <UnderlineField label="矿发毛重" value={weightText(values.gross)} />
+                <UnderlineField label="矿发皮重" value={weightText(values.tare)} />
+                <UnderlineField label="矿发净重" value={weightText(values.net)} required />
+                <UnderlineField
+                  label="发站时间"
+                  value={values.shipTime ? values.shipTime.format('YYYY-MM-DD HH:mm:ss') : undefined}
+                  required
+                />
+                <UnderlineField label="发站" value={values.station} />
               </div>
               <div>
                 <p className="mer-col-title">入厂信息</p>
-                <Form.Item label="采样方式" name="sampleMethod" rules={[{ required: true, message: '请选择采样方式' }]}>
-                  <Select options={SAMPLE_METHODS.map((t) => ({ value: t, label: t }))} />
-                </Form.Item>
-                <Form.Item
-                  label="采样位"
-                  name="samplePos"
-                  rules={sampleRequired ? [{ required: true, message: '请选择采样位' }] : []}
-                >
-                  <Select showSearch allowClear options={SAMPLE_POSITIONS.map((t) => ({ value: t, label: t }))} />
-                </Form.Item>
-                <Form.Item
-                  label="过衡位"
-                  name="weighPos"
-                  rules={sampleRequired ? [{ required: true, message: '请选择过衡位' }] : []}
-                >
-                  <Select showSearch allowClear options={WEIGH_POSITIONS.map((t) => ({ value: t, label: t }))} />
-                </Form.Item>
-                <Form.Item label="卸煤区域" name="unloadArea" rules={[{ required: true, message: '请选择卸煤区域' }]}>
-                  <Select showSearch allowClear options={UNLOAD_AREAS.map((t) => ({ value: t, label: t }))} />
-                </Form.Item>
+                <UnderlineField label="采样方式" value={values.sampleMethod} required />
+                <UnderlineField label="采样位" value={values.samplePos} required={site.SAMPLE_MEASURE_EDIT === 1} />
+                <UnderlineField label="过衡位" value={values.weighPos} required={site.SAMPLE_MEASURE_EDIT === 1} />
+                <UnderlineField label="卸煤区域" value={values.unloadArea} required />
                 {site.ENABLE_ENTER_CARD ? (
-                  <Form.Item label="入厂卡" name="entryCard" rules={[{ required: true, message: '请填写入厂卡' }]}>
-                    <Input placeholder="临时卡优先于固定卡" />
-                  </Form.Item>
+                  <UnderlineField label="入厂卡" value={values.entryCard} required />
                 ) : (
-                  <Form.Item label=" ">
-                    <span style={{ color: 'rgba(0,0,0,.25)' }}>本入厂点未启用入厂卡</span>
-                  </Form.Item>
+                  <UnderlineField label="入厂卡" value="本入厂点未启用入厂卡" />
                 )}
               </div>
             </div>
-          </Form>
+          </div>
 
           <div className="mer-footer-actions">
             <Space>
               <Button type="primary" onClick={submit}>
                 确认登记
               </Button>
-              <Button
-                icon={<ClearOutlined />}
-                onClick={() => {
-                  form.resetFields();
-                  form.setFieldValue('sampleMethod', '机械采样');
-                }}
-              >
+              <Button icon={<ClearOutlined />} onClick={() => setValues(emptyForm())}>
                 清空
               </Button>
             </Space>

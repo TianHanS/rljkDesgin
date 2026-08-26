@@ -1,17 +1,8 @@
 /**
  * @name 自动入厂监测
- *
- * 参考资料：
- * - /rules/design-guide.md
- * - /rules/development-standards.md
- * - /src/themes/antd-new/DESIGN-SPEC.md
- * - /skills/third-party/frontend-design/SKILL.md
- * - /skills/third-party/ant-design/SKILL.md
- * - /skills/default-design-guide-minimal/SKILL.md
- * - /src/prototypes/auto-entry-monitor/spec.md
  */
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { ConfigProvider, Modal, Segmented, message } from 'antd';
+import { ConfigProvider, Segmented, message } from 'antd';
 import zhCN from 'antd/locale/zh_CN';
 import './style.css';
 import GatePointCard from './components/GatePointCard';
@@ -76,38 +67,27 @@ const AutoEntryMonitor: React.FC = () => {
     .map((id) => gates.find((gate) => gate.id === id))
     .filter((gate): gate is GatePoint => Boolean(gate));
 
-  const confirmToggle = useCallback((gate: GatePoint, next: boolean) => {
+  const applyToggle = useCallback((gate: GatePoint, next: boolean) => {
     const action = next ? '启用' : '停用';
-    Modal.confirm({
-      title: `${action}自动入厂登记服务`,
-      content: next
-        ? `确认启用「${gate.name}」自动入厂登记服务？启用后将恢复车号识别与自动登记。`
-        : `确认停用「${gate.name}」自动入厂登记服务？停用后该点不再自动识别登记，现场车辆需转人工入厂。`,
-      okText: `确认${action}`,
-      cancelText: '取消',
-      okButtonProps: next ? undefined : { danger: true },
-      onOk: () => {
-        setGates((list) =>
-          list.map((item) =>
-            item.id === gate.id
-              ? { ...item, serviceEnabled: next, ledText: ledTextFor(item, next) }
-              : item,
-          ),
-        );
-        setLogs((list) => [
-          {
-            id: nextLogId(),
-            gateId: gate.id,
-            time: formatDateTime(new Date()),
-            level: 'normal',
-            kind: 'service',
-            message: `已${action}自动入厂登记服务`,
-          },
-          ...list,
-        ]);
-        message.success(`「${gate.name}」自动入厂登记服务已${action}`);
+    setGates((list) =>
+      list.map((item) =>
+        item.id === gate.id
+          ? { ...item, serviceEnabled: next, ledText: ledTextFor(item, next) }
+          : item,
+      ),
+    );
+    setLogs((list) => [
+      {
+        id: nextLogId(),
+        gateId: gate.id,
+        time: formatDateTime(new Date()),
+        level: 'normal',
+        kind: 'service',
+        message: `已${action}自动入厂登记服务`,
       },
-    });
+      ...list,
+    ]);
+    message.success(`「${gate.name}」自动入厂登记服务已${action}`);
   }, []);
 
   useEffect(() => {
@@ -199,7 +179,7 @@ const AutoEntryMonitor: React.FC = () => {
               clock={formatClock(now)}
               logs={logs.filter((item) => item.gateId === gate.id)}
               records={records.filter((item) => item.gateId === gate.id)}
-              onToggleService={(next) => confirmToggle(gate, next)}
+              onToggleService={(next) => applyToggle(gate, next)}
             />
           ))}
         </div>

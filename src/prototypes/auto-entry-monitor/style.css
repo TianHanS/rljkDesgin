@@ -45,12 +45,11 @@
 
 .aem-body {
   flex: 1;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+  display: flex;
+  flex-direction: column;
   gap: 12px;
   padding: 12px 16px 16px;
   min-height: 0;
-  align-items: stretch;
 }
 
 .aem-gate {
@@ -60,66 +59,99 @@
   display: flex;
   flex-direction: column;
   min-width: 0;
-  min-height: 0;
 }
 
-.aem-gate-hd {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+.aem-gate-title {
   padding: 10px 14px;
+  font-size: 14px;
+  font-weight: 650;
   border-bottom: 1px solid #f0f0f0;
   flex-shrink: 0;
 }
 
-.aem-gate-hd-main {
+.aem-gate-bd {
+  display: grid;
+  grid-template-columns: minmax(260px, 1fr) minmax(280px, 1.1fr) minmax(260px, 1fr);
+  min-height: 380px;
+}
+
+.aem-col {
   display: flex;
-  align-items: center;
-  gap: 12px;
+  flex-direction: column;
   min-width: 0;
-  flex-wrap: wrap;
+  min-height: 0;
+  padding: 12px;
+  border-right: 1px solid #f0f0f0;
 }
 
-.aem-gate-hd h2 {
+.aem-col:last-child {
+  border-right: 0;
+}
+
+.aem-col-title {
   margin: 0;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 650;
-  white-space: nowrap;
+  color: rgba(0, 0, 0, 0.88);
 }
 
-.aem-gate-tags {
+.aem-col-desc {
+  margin: 4px 0 8px;
+  font-size: 12px;
+  color: rgba(0, 0, 0, 0.45);
+}
+
+.aem-col-subtitle {
+  margin: 8px 0 6px;
+  font-size: 12px;
+  color: rgba(0, 0, 0, 0.45);
+}
+
+.aem-col-head {
   display: flex;
   align-items: center;
-  gap: 4px;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
   flex-wrap: wrap;
 }
 
-.aem-gate-hd-action {
+.aem-device-status {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+  padding: 8px 10px;
+  background: #fafafa;
+  border: 1px solid #f0f0f0;
+  border-radius: 6px;
+}
+
+.aem-device-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.aem-device-label {
+  color: rgba(0, 0, 0, 0.65);
+}
+
+.aem-service-row {
   display: flex;
   align-items: center;
   gap: 8px;
-  flex-shrink: 0;
 }
 
-.aem-gate-switch-label {
+.aem-service-label {
   font-size: 12px;
   color: rgba(0, 0, 0, 0.65);
 }
 
-.aem-gate-bd {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-height: 0;
-  padding: 12px;
-  gap: 10px;
-}
-
-.aem-monitor-band {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+.aem-log-filter {
+  margin-bottom: 8px;
   flex-shrink: 0;
 }
 
@@ -128,9 +160,10 @@
   background: #1f2329;
   border-radius: 6px;
   overflow: hidden;
-  aspect-ratio: 21 / 9;
-  min-height: 140px;
-  max-height: 220px;
+  aspect-ratio: 16 / 10;
+  min-height: 120px;
+  max-height: 200px;
+  flex-shrink: 0;
 }
 
 .aem-cam-scene {
@@ -264,10 +297,12 @@
   display: flex;
   align-items: center;
   gap: 10px;
+  margin-top: 8px;
   background: #111827;
   border-radius: 4px;
   padding: 6px 10px;
   min-height: 32px;
+  flex-shrink: 0;
 }
 
 .aem-led-label {
@@ -293,32 +328,13 @@
   color: rgba(255, 255, 255, 0.35);
 }
 
-.aem-data-band {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-height: 0;
-  border: 1px solid #f0f0f0;
-  border-radius: 6px;
-  background: #fafafa;
-}
-
-.aem-data-toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 8px 10px;
-  border-bottom: 1px solid #f0f0f0;
-  background: #fff;
-  flex-shrink: 0;
-  flex-wrap: wrap;
-}
-
 .aem-logs {
   flex: 1;
   min-height: 0;
   overflow: auto;
+  border: 1px solid #f0f0f0;
+  border-radius: 6px;
+  background: #fafafa;
 }
 
 .aem-log {
@@ -365,12 +381,10 @@
 .aem-records-wrap {
   flex: 1;
   min-height: 0;
-  padding: 0 4px 4px;
+  border: 1px solid #f0f0f0;
+  border-radius: 6px;
   background: #fff;
-}
-
-.aem-records-wrap .ant-table-wrapper {
-  height: 100%;
+  padding: 4px;
 }
 
 @keyframes aem-scan {
@@ -384,8 +398,17 @@
 }
 
 @media (max-width: 1200px) {
-  .aem-body {
+  .aem-gate-bd {
     grid-template-columns: 1fr;
+  }
+
+  .aem-col {
+    border-right: 0;
+    border-bottom: 1px solid #f0f0f0;
+  }
+
+  .aem-col:last-child {
+    border-bottom: 0;
   }
 }
 
@@ -396,11 +419,6 @@
 
   .aem-system-switch {
     width: 100%;
-  }
-
-  .aem-gate-hd {
-    flex-direction: column;
-    align-items: flex-start;
   }
 
   .aem-log {

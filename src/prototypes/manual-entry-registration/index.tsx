@@ -37,16 +37,13 @@ import type { ColumnsType } from 'antd/es/table';
 import './style.css';
 import {
   INITIAL_RECORDS,
-  ORIGINAL_MODE_LABEL,
-  PLAN_MODE_LABEL,
   PLANS,
   PRE_ENTRIES,
   SAMPLE_POSITIONS,
   SITES,
   WEIGH_POSITIONS,
   findPlan,
-  findPlanByPlate,
-  findPreEntry,
+  lookupVehicleByPlate,
   mineCardSample,
   nextSerial,
   type CoalPlan,
@@ -175,36 +172,30 @@ const ManualEntryRegistration: React.FC = () => {
       message.warning('请先输入或选择车牌号码');
       return;
     }
-    const plate = values.plate.trim();
-    const hit = vehicles.find((v) => v.plate === plate) ?? findPreEntry(plate);
-    const plan = hit ? findPlan(hit.planId) : findPlanByPlate(plate);
-    if (!plan) {
-      message.warning('未查到预入厂 / 计划信息');
-      return;
-    }
-    fillPlan(plan, true);
-    message.success('已获取预入厂矿发信息');
+    fillFromPlate(values.plate.trim());
   };
 
-  const fillFromPlate = (plate: string) => {
-    const hit = vehicles.find((v) => v.plate === plate) ?? findPreEntry(plate);
-    const plan = hit ? findPlan(hit.planId) : findPlanByPlate(plate);
-    if (plan) {
-      const withWeights = shouldFillWeights(site, 'pre') || shouldFillWeights(site, 'plan');
+  const fillFromPlate = (plate: string, silent = false) => {
+    const hit = lookupVehicleByPlate(plate);
+    if (hit) {
+      const { plan } = hit;
       const base = applyPlan(plan);
       setValues((prev) => ({
         ...prev,
         ...base,
-        plate,
+        plate: plan.plate,
         shipTime: plan.shipTime ? dayjs(plan.shipTime) : null,
+        gross: plan.gross,
+        tare: plan.tare,
+        net: plan.net,
         sampleMethod: prev.sampleMethod || '机械采样',
         samplePos: prev.samplePos || SAMPLE_POSITIONS[0],
         weighPos: prev.weighPos || WEIGH_POSITIONS[0],
-        ...(withWeights ? { gross: plan.gross, tare: plan.tare, net: plan.net } : {}),
       }));
-      message.success(`已加载 ${plate} 关联信息`);
+      if (!silent) message.success(`已加载 ${plan.plate} 车辆信息（含矿发毛皮净）`);
     } else {
       patch({ plate });
+      if (!silent) message.warning('未查到该车牌关联信息');
     }
   };
 
@@ -286,14 +277,14 @@ const ManualEntryRegistration: React.FC = () => {
       ...base,
       plate: parsed.plate,
       shipTime: parsed.stationTime ? dayjs(parsed.stationTime) : dayjs(plan.shipTime),
+      gross: parsed.gross,
+      tare: parsed.tare,
+      net: parsed.net,
       sampleMethod: prev.sampleMethod || '机械采样',
       samplePos: prev.samplePos || SAMPLE_POSITIONS[0],
       weighPos: prev.weighPos || WEIGH_POSITIONS[0],
-      ...(shouldFillWeights(site, 'yunyi')
-        ? { gross: parsed.gross, tare: parsed.tare, net: parsed.net }
-        : {}),
     }));
-    message.success('云驿二维码已识别并加载车辆信息');
+    message.success('云驿二维码已识别，已加载车辆信息与矿发毛皮净');
   };
 
   const handleAllowConfirm = (reason: string) => {
@@ -424,28 +415,20 @@ const ManualEntryRegistration: React.FC = () => {
   return (
     <ConfigProvider locale={zhCN} componentSize="small">
       <div className="mer-root">
-        <header className="mer-head">
-          <h1>燃煤入厂登记</h1>
-          <div className="mer-head-tools">
-            <Tag>{PLAN_MODE_LABEL[site.GET_PLAN_MSG]}</Tag>
-            <Tag>{ORIGINAL_MODE_LABEL[site.GET_ORIGINAL_MSG]}</Tag>
-            <span style={{ color: 'rgba(0,0,0,.45)' }}>入厂点</span>
-            <Select
-              style={{ width: 148 }}
-              value={siteId}
-              options={SITES.map((s) => ({ value: s.id, label: s.name }))}
-              onChange={(id) => {
-                setSiteId(id);
-                setValues(emptyForm());
-              }}
-            />
-          </div>
-        </header>
-
         <section className="mer-card mer-form-card">
           <div className="mer-card-hd">
             <h2>登记入厂信息</h2>
             <div className="mer-card-actions">
+              <span className="mer-site-label">入厂点</span>
+              <Select
+                style={{ width: 148 }}
+                value={siteId}
+                options={SITES.map((s) => ({ value: s.id, label: s.name }))}
+                onChange={(id) => {
+                  setSiteId(id);
+                  setValues(emptyForm());
+                }}
+              />
               {(site.GET_PLAN_MSG === 1 || site.GET_PLAN_MSG === 2) && (
                 <Button icon={<PlusSquareOutlined />} onClick={() => setPlanOpen(true)}>
                   选择计划
@@ -480,6 +463,7 @@ const ManualEntryRegistration: React.FC = () => {
                   value={values.plate}
                   onChange={(plate) => patch({ plate })}
                   onSelect={fillFromPlate}
+                  onQuery={fillFromPlate}
                 />
                 <UnderlineField label="供应商" value={values.supplier} />
                 <UnderlineField label="矿点" value={values.mine} />

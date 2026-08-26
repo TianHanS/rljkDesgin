@@ -259,6 +259,18 @@ export const findPlanByPlate = (plate: string) =>
 export const findPreEntry = (plate: string) =>
   PRE_ENTRIES.find((p) => p.plate.replace(/\s/g, '') === plate.replace(/\s/g, ''));
 
+/** 按车牌查询计划与预入厂记录 */
+export const lookupVehicleByPlate = (plate: string) => {
+  const key = plate.trim().replace(/\s/g, '');
+  if (!key) return null;
+  const pre = findPreEntry(plate);
+  const plan = pre ? findPlan(pre.planId) : findPlanByPlate(plate);
+  if (!plan) return null;
+  return { plan, pre: pre ?? null };
+};
+
+export const isKnownPlate = (plate: string) => !!lookupVehicleByPlate(plate);
+
 /** 输入三位及以上时，按车牌前缀/包含关系联想候选 */
 export const searchPlates = (query: string) => {
   const key = query.trim().replace(/\s/g, '').toUpperCase();

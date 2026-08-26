@@ -14,18 +14,12 @@ import {
   type RunLog,
 } from '../data';
 
-function DeviceStatusLine({
-  label,
-  online,
-}: {
-  label: string;
-  online: boolean;
-}) {
+function DeviceDot({ label, online }: { label: string; online: boolean }) {
   return (
-    <div className="aem-device-line">
-      <span className="aem-device-label">{label}</span>
-      <Tag color={online ? 'success' : 'default'}>{online ? '在线' : '离线'}</Tag>
-    </div>
+    <span className="aem-device-dot">
+      <i className={`aem-dot ${online ? 'on' : 'off'}`} aria-hidden />
+      <span>{label}</span>
+    </span>
   );
 }
 
@@ -97,20 +91,22 @@ export default function GatePointCard({
         <div className="aem-col aem-col-device">
           <h3 className="aem-col-title">设备监测</h3>
           <div className="aem-device-status">
-            <DeviceStatusLine label="车号识别" online={gate.recognizer === 'online'} />
-            <DeviceStatusLine label="LED" online={gate.led === 'online'} />
+            <DeviceDot label="车号识别" online={gate.recognizer === 'online'} />
+            <DeviceDot label="LED" online={gate.led === 'online'} />
           </div>
           <div className="aem-col-subtitle">车号识别实时监控</div>
-          <VideoMonitor
-            cameraName={gate.cameraName}
-            clock={clock}
-            plate={gate.currentPlate}
-            deviceStatus={pointStatus}
-            serviceEnabled={gate.serviceEnabled}
-          />
-          <div className={`aem-led ${gate.led === 'offline' ? 'off' : ''}`} title={gate.ledText}>
-            <span className="aem-led-label">LED</span>
-            <span className="aem-led-text">{gate.ledText}</span>
+          <div className="aem-monitor-stack">
+            <VideoMonitor
+              cameraName={gate.cameraName}
+              clock={clock}
+              plate={gate.currentPlate}
+              deviceStatus={pointStatus}
+              serviceEnabled={gate.serviceEnabled}
+            />
+            <div className={`aem-led ${gate.led === 'offline' ? 'off' : ''}`} title={gate.ledText}>
+              <span className="aem-led-label">LED</span>
+              <span className="aem-led-text">{gate.ledText}</span>
+            </div>
           </div>
         </div>
 
@@ -154,7 +150,7 @@ export default function GatePointCard({
               ]}
             />
           </div>
-          <div className="aem-logs">
+          <div className="aem-col-scroll aem-logs">
             {filteredLogs.length === 0 ? (
               <div className="aem-log aem-log-empty">暂无运行日志</div>
             ) : (
@@ -185,7 +181,7 @@ export default function GatePointCard({
               pagination={false}
               columns={recordColumns}
               dataSource={sortedRecords}
-              scroll={{ y: 320 }}
+              scroll={{ y: 248 }}
               locale={{ emptyText: '暂无入厂登记记录' }}
             />
           </div>

@@ -1,6 +1,7 @@
 @import "tailwindcss";
 
 .aem-root {
+  --aem-gate-height: 400px;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
@@ -59,6 +60,9 @@
   display: flex;
   flex-direction: column;
   min-width: 0;
+  height: var(--aem-gate-height);
+  flex-shrink: 0;
+  overflow: hidden;
 }
 
 .aem-gate-title {
@@ -67,12 +71,17 @@
   font-weight: 650;
   border-bottom: 1px solid #f0f0f0;
   flex-shrink: 0;
+  height: 41px;
+  box-sizing: border-box;
+  line-height: 21px;
 }
 
 .aem-gate-bd {
   display: grid;
   grid-template-columns: minmax(260px, 1fr) minmax(280px, 1.1fr) minmax(260px, 1fr);
-  min-height: 380px;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .aem-col {
@@ -93,18 +102,21 @@
   font-size: 13px;
   font-weight: 650;
   color: rgba(0, 0, 0, 0.88);
+  flex-shrink: 0;
 }
 
 .aem-col-desc {
   margin: 4px 0 8px;
   font-size: 12px;
   color: rgba(0, 0, 0, 0.45);
+  flex-shrink: 0;
 }
 
 .aem-col-subtitle {
   margin: 8px 0 6px;
   font-size: 12px;
   color: rgba(0, 0, 0, 0.45);
+  flex-shrink: 0;
 }
 
 .aem-col-head {
@@ -114,29 +126,55 @@
   gap: 8px;
   margin-bottom: 8px;
   flex-wrap: wrap;
+  flex-shrink: 0;
 }
 
 .aem-device-status {
   display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin-top: 8px;
-  padding: 8px 10px;
-  background: #fafafa;
-  border: 1px solid #f0f0f0;
-  border-radius: 6px;
-}
-
-.aem-device-line {
-  display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  font-size: 12px;
+  gap: 14px;
+  margin-top: 8px;
+  flex-shrink: 0;
 }
 
-.aem-device-label {
+.aem-device-dot {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
   color: rgba(0, 0, 0, 0.65);
+  line-height: 1;
+}
+
+.aem-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.aem-dot.on {
+  background: #52c41a;
+  box-shadow: 0 0 0 2px rgba(82, 196, 26, 0.2);
+}
+
+.aem-dot.off {
+  background: #bfbfbf;
+}
+
+.aem-monitor-stack {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.aem-col-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
 }
 
 .aem-service-row {
@@ -160,10 +198,8 @@
   background: #1f2329;
   border-radius: 6px;
   overflow: hidden;
-  aspect-ratio: 16 / 10;
-  min-height: 120px;
-  max-height: 200px;
-  flex-shrink: 0;
+  flex: 1;
+  min-height: 100px;
 }
 
 .aem-cam-scene {
@@ -329,12 +365,18 @@
 }
 
 .aem-logs {
-  flex: 1;
-  min-height: 0;
-  overflow: auto;
   border: 1px solid #f0f0f0;
   border-radius: 6px;
   background: #fafafa;
+}
+
+.aem-records-wrap {
+  flex: 1;
+  min-height: 0;
+  border: 1px solid #f0f0f0;
+  border-radius: 6px;
+  background: #fff;
+  padding: 4px;
 }
 
 .aem-log {
@@ -378,15 +420,6 @@
   grid-template-columns: 1fr;
 }
 
-.aem-records-wrap {
-  flex: 1;
-  min-height: 0;
-  border: 1px solid #f0f0f0;
-  border-radius: 6px;
-  background: #fff;
-  padding: 4px;
-}
-
 @keyframes aem-scan {
   0% { top: 8%; }
   100% { top: 88%; }
@@ -398,6 +431,11 @@
 }
 
 @media (max-width: 1200px) {
+  .aem-gate {
+    height: auto;
+    min-height: var(--aem-gate-height);
+  }
+
   .aem-gate-bd {
     grid-template-columns: 1fr;
   }

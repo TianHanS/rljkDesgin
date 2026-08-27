@@ -1,18 +1,17 @@
 /**
- * 车牌号码编辑框：输入三位及以上自动联想匹配车牌
+ * 车牌号码编辑框：输入三位及以上自动联想；不合规车牌前端提示
  */
 import React, { useMemo, useRef, useState } from 'react';
-import { AutoComplete } from 'antd';
-import { searchPlates, isKnownPlate } from '../data';
+import { AutoComplete, message } from 'antd';
+import { isValidPlate, searchPlates } from '../data';
 
 interface Props {
   value?: string;
   onChange: (plate: string) => void;
   onSelect: (plate: string) => void;
-  onQuery: (plate: string) => void;
 }
 
-const PlateInput: React.FC<Props> = ({ value, onChange, onSelect, onQuery }) => {
+const PlateInput: React.FC<Props> = ({ value, onChange, onSelect }) => {
   const [open, setOpen] = useState(false);
   const selectingRef = useRef(false);
 
@@ -22,10 +21,14 @@ const PlateInput: React.FC<Props> = ({ value, onChange, onSelect, onQuery }) => 
     return searchPlates(key).map((plate) => ({ value: plate, label: plate }));
   }, [value]);
 
-  const tryQuery = (plate: string) => {
+  const validateAndSelect = (plate: string) => {
     const key = plate.trim();
-    if (key.length < 3 || !isKnownPlate(key)) return;
-    onQuery(key);
+    if (key.length < 3) return;
+    if (!isValidPlate(key)) {
+      message.error('车牌错误');
+      return;
+    }
+    onSelect(key);
   };
 
   return (
@@ -45,7 +48,7 @@ const PlateInput: React.FC<Props> = ({ value, onChange, onSelect, onQuery }) => 
               selectingRef.current = false;
               return;
             }
-            tryQuery(value || '');
+            if (value?.trim()) validateAndSelect(value);
           }, 150);
         }}
         onSearch={(next) => {
@@ -54,14 +57,14 @@ const PlateInput: React.FC<Props> = ({ value, onChange, onSelect, onQuery }) => 
         }}
         onSelect={(plate) => {
           selectingRef.current = true;
-          onSelect(String(plate));
+          validateAndSelect(String(plate));
           setOpen(false);
         }}
         onChange={(next) => onChange(String(next).toUpperCase())}
         onKeyDown={(e) => {
           if (e.key === 'Enter') {
             e.preventDefault();
-            tryQuery(value || '');
+            if (value?.trim()) validateAndSelect(value);
           }
         }}
       />

@@ -26,9 +26,74 @@ body,
   font-family: "PingFang SC", "Microsoft YaHei", "Segoe UI", system-ui, sans-serif;
 }
 
-.mer-root-select {
-  justify-content: center;
+.mer-toolbar {
+  flex: 0 0 auto;
+  display: flex;
   align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 4px 4px 0;
+}
+
+.mer-module-tabs {
+  margin-bottom: 0 !important;
+}
+
+.mer-module-tabs .ant-tabs-nav {
+  margin-bottom: 0 !important;
+}
+
+.mer-auto-tag {
+  flex-shrink: 0;
+}
+
+.mer-field-input,
+.mer-field-select {
+  width: 100%;
+}
+
+.mer-field-input .ant-input-number,
+.mer-field-select .ant-select-selector {
+  width: 100% !important;
+  border: none !important;
+  border-bottom: 1px solid #d9d9d9 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+.mer-module-placeholder {
+  padding: 24px 16px;
+  color: rgba(0, 0, 0, 0.45);
+  font-size: 13px;
+}
+
+.mer-card-read-hint {
+  margin: 0;
+  font-size: 13px;
+  color: rgba(0, 0, 0, 0.45);
+}
+
+.mer-card-read-anim {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 32px 0;
+  text-align: center;
+}
+
+.mer-card-read-fail p {
+  color: #faad14;
+}
+
+.mer-global-spin {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.45);
+  z-index: 1000;
 }
 
 .mer-site-select {

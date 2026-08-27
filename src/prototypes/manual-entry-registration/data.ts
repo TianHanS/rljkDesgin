@@ -1,24 +1,20 @@
 /**
- * 燃煤入厂登记 · 站点配置、来煤计划、预入厂车辆与现场字典
- *
- * 参考资料：
- * - 用户提供的人工入厂登记截图与功能需求
- * - /rules/design-guide.md
+ * 燃煤入厂登记 · 入厂点、模块配置、表单字段/操作权限与 Mock 数据
  */
 
-export type PlanGetMode = 1 | 2 | 3 | 4;
-export type OriginalGetMode = 1 | 2 | 3 | 4;
-export type SampleEditMode = 0 | 1;
-export type EntryPermit = 'forbidden' | 'allowed';
-export type RecordStatus = 'registered';
+export type ModuleCode = 'coal-entry' | 'transfer-coal' | 'non-coal' | 'exit';
+export type RecordStatus = 'registered' | 'exited';
+
+export interface FieldConfig {
+  visible: boolean;
+  editable: boolean;
+}
 
 export interface SiteConfig {
   id: string;
   name: string;
-  GET_PLAN_MSG: PlanGetMode;
-  GET_ORIGINAL_MSG: OriginalGetMode;
-  SAMPLE_MEASURE_EDIT: SampleEditMode;
-  ENABLE_ENTER_CARD: boolean;
+  /** 模块编码 MEOR，用于请求字段/操作配置 */
+  moduleCode: string;
 }
 
 export interface CoalPlan {
@@ -37,15 +33,16 @@ export interface CoalPlan {
   gross: number;
   tare: number;
   net: number;
+  samplePos: string;
+  weighPos: string;
 }
 
 export interface PreEntryVehicle {
   plate: string;
   planId: string;
-  permit: EntryPermit;
-  preEntryAt: string;
   vehicleCard: string;
   entryCard: string;
+  preEntryAt: string;
 }
 
 export interface EntryRecord {
@@ -63,69 +60,145 @@ export interface EntryRecord {
   status: RecordStatus;
   entryCard: string;
   siteId: string;
+  taskNo?: string;
 }
 
+export interface ModuleMenu {
+  code: ModuleCode;
+  label: string;
+  /** 模拟登录人菜单权限 */
+  permitted: boolean;
+}
+
+export const SITE_STORAGE_KEY = 'mer_last_site_id';
+
 export const SITES: SiteConfig[] = [
-  {
-    id: 'south',
-    name: '南门入厂点',
-    GET_PLAN_MSG: 1,
-    GET_ORIGINAL_MSG: 3,
-    SAMPLE_MEASURE_EDIT: 1,
-    ENABLE_ENTER_CARD: true,
-  },
-  {
-    id: 'north',
-    name: '北门入厂点',
-    GET_PLAN_MSG: 3,
-    GET_ORIGINAL_MSG: 1,
-    SAMPLE_MEASURE_EDIT: 0,
-    ENABLE_ENTER_CARD: false,
-  },
-  {
-    id: 'east',
-    name: '东门入厂点',
-    GET_PLAN_MSG: 4,
-    GET_ORIGINAL_MSG: 2,
-    SAMPLE_MEASURE_EDIT: 1,
-    ENABLE_ENTER_CARD: true,
-  },
-  {
-    id: 'west',
-    name: '西门入厂点',
-    GET_PLAN_MSG: 2,
-    GET_ORIGINAL_MSG: 4,
-    SAMPLE_MEASURE_EDIT: 1,
-    ENABLE_ENTER_CARD: true,
-  },
+  { id: 'south', name: '南门入厂点', moduleCode: 'MEOR-SOUTH' },
+  { id: 'north', name: '北门入厂点', moduleCode: 'MEOR-NORTH' },
+  { id: 'east', name: '东门入厂点', moduleCode: 'MEOR-EAST' },
+  { id: 'west', name: '西门入厂点', moduleCode: 'MEOR-WEST' },
 ];
 
-export const SITE_PRESENTATION: Record<string, { abbr: string; hint: string }> = {
-  south: { abbr: '南门', hint: '主通道入厂 · 支持选择计划' },
-  north: { abbr: '北门', hint: '按车牌匹配 · 预入厂获取' },
-  east: { abbr: '东门', hint: '读矿发卡 · 矿发读卡' },
-  west: { abbr: '西门', hint: '扫计划码 · 云驿扫码' },
-};
-
-export const PLAN_MODE_LABEL: Record<PlanGetMode, string> = {
-  1: '人工选择计划',
-  2: '扫描计划二维码',
-  3: '按车牌匹配计划',
-  4: '读矿发卡',
-};
-
-export const ORIGINAL_MODE_LABEL: Record<OriginalGetMode, string> = {
-  1: '获取预入厂信息',
-  2: '从矿发卡读取',
-  3: '人工按送货单录入',
-  4: '扫描云驿二维码',
-};
+/** 模拟当前登录人可见的二级功能菜单 */
+export const MODULE_MENUS: ModuleMenu[] = [
+  { code: 'coal-entry', label: '来煤登记', permitted: true },
+  { code: 'transfer-coal', label: '转场煤登记', permitted: true },
+  { code: 'non-coal', label: '非煤物资登记', permitted: false },
+  { code: 'exit', label: '出厂登记', permitted: true },
+];
 
 export const TRANSPORTERS = ['蒙东物流', '鄂尔多斯汽运', '湘赣联运', '桂海运输', '神华物流'];
-export const SAMPLE_METHODS = ['机械采样', '人工采样'];
+export const SAMPLE_METHODS = ['机械采样', '人工采样'] as const;
 export const SAMPLE_POSITIONS = ['1#机械采样机', '2#机械采样机', '人工采样棚'];
 export const WEIGH_POSITIONS = ['1#汽车衡', '2#汽车衡', '3#汽车衡'];
-export const UNLOAD_AREAS = ['#1 圆形煤场', '#2 圆形煤场', '厂外中转煤场'];
+
+/** 字段配置项：未出现在配置中的非配置字段默认直接加载 */
+export type FieldKey =
+  | 'FIELD_vehicleNo'
+  | 'FIELD_cardNo'
+  | 'FIELD_mineHairGrossWeight'
+  | 'FIELD_mineHairTare'
+  | 'FIELD_ticketHeight'
+  | 'FIELD_fromDate'
+  | 'FIELD_simplingName'
+  | 'FIELD_poundName'
+  | 'FIELD_simplingSource'
+  | 'FIELD_cardNo1';
+
+export type OperationKey =
+  | 'OPERATION_manualSelectPlan'
+  | 'OPERATION_yunYiCode'
+  | 'OPERATION_yunYiCodeAuto'
+  | 'OPERATION_planCode'
+  | 'OPERATION_cardNo1Search'
+  | 'OPERATION_enterComfire'
+  | 'OPERATION_preEnterComfire'
+  | 'OPERATION_cardNo1WriteAndenterComfire'
+  | 'OPERATION_cardNo1Write';
+
+/** 按入厂点模块编码返回字段与操作配置（原型 Mock） */
+export const getModuleFieldConfig = (_moduleCode: string): Partial<Record<FieldKey, FieldConfig>> => ({
+  FIELD_vehicleNo: { visible: true, editable: true },
+  FIELD_cardNo: { visible: true, editable: false },
+  FIELD_mineHairGrossWeight: { visible: true, editable: true },
+  FIELD_mineHairTare: { visible: true, editable: true },
+  FIELD_ticketHeight: { visible: true, editable: true },
+  FIELD_fromDate: { visible: true, editable: false },
+  FIELD_simplingName: { visible: true, editable: true },
+  FIELD_poundName: { visible: true, editable: true },
+  FIELD_simplingSource: { visible: true, editable: true },
+  FIELD_cardNo1: { visible: true, editable: false },
+});
+
+export const getModuleOperationConfig = (
+  moduleCode: string,
+): Partial<Record<OperationKey, boolean>> => {
+  const base: Partial<Record<OperationKey, boolean>> = {
+    OPERATION_manualSelectPlan: true,
+    OPERATION_yunYiCode: true,
+    OPERATION_planCode: true,
+    OPERATION_cardNo1Search: true,
+    OPERATION_enterComfire: true,
+    OPERATION_preEnterComfire: true,
+    OPERATION_cardNo1WriteAndenterComfire: true,
+    OPERATION_cardNo1Write: true,
+  };
+  if (moduleCode === 'MEOR-NORTH') {
+    return {
+      ...base,
+      OPERATION_planCode: false,
+      OPERATION_yunYiCodeAuto: false,
+      OPERATION_preEnterComfire: false,
+    };
+  }
+  if (moduleCode === 'MEOR-WEST') {
+    return {
+      ...base,
+      OPERATION_manualSelectPlan: false,
+      OPERATION_yunYiCodeAuto: true,
+    };
+  }
+  return base;
+};
+
+export const isFieldVisible = (
+  key: FieldKey | null,
+  cfg: Partial<Record<FieldKey, FieldConfig>>,
+) => {
+  if (!key) return true;
+  const item = cfg[key];
+  return item ? item.visible : true;
+};
+
+export const isFieldEditable = (
+  key: FieldKey | null,
+  cfg: Partial<Record<FieldKey, FieldConfig>>,
+) => {
+  if (!key) return false;
+  const item = cfg[key];
+  return item ? item.editable : false;
+};
+
+export const isOperationEnabled = (
+  key: OperationKey,
+  cfg: Partial<Record<OperationKey, boolean>>,
+) => cfg[key] !== false;
+
+export const readCachedSiteId = (): string | null => {
+  try {
+    return localStorage.getItem(SITE_STORAGE_KEY);
+  } catch {
+    return null;
+  }
+};
+
+export const writeCachedSiteId = (siteId: string) => {
+  try {
+    localStorage.setItem(SITE_STORAGE_KEY, siteId);
+  } catch {
+    /* ignore */
+  }
+};
 
 export const PLANS: CoalPlan[] = [
   {
@@ -144,6 +217,8 @@ export const PLANS: CoalPlan[] = [
     gross: 105,
     tare: 13,
     net: 92,
+    samplePos: '1#机械采样机',
+    weighPos: '1#汽车衡',
   },
   {
     id: '831103931018260481',
@@ -161,6 +236,8 @@ export const PLANS: CoalPlan[] = [
     gross: 98.6,
     tare: 14.2,
     net: 84.4,
+    samplePos: '2#机械采样机',
+    weighPos: '2#汽车衡',
   },
   {
     id: '831103931018260482',
@@ -178,11 +255,13 @@ export const PLANS: CoalPlan[] = [
     gross: 87,
     tare: 12.5,
     net: 74.5,
+    samplePos: '1#机械采样机',
+    weighPos: '2#汽车衡',
   },
   {
     id: '831103931018260483',
     serialNo: 'JH20260825004',
-    taskNo: 'YS20260825110',
+    taskNo: 'YS20260825102',
     plate: '鲁B12876',
     supplier: '国家能源销售',
     mine: '哈尔乌素矿',
@@ -195,6 +274,8 @@ export const PLANS: CoalPlan[] = [
     gross: 110,
     tare: 15,
     net: 95,
+    samplePos: '2#机械采样机',
+    weighPos: '1#汽车衡',
   },
 ];
 
@@ -202,26 +283,23 @@ export const PRE_ENTRIES: PreEntryVehicle[] = [
   {
     plate: '蒙A90005',
     planId: '831103931018260480',
-    permit: 'forbidden',
-    preEntryAt: '2026-08-25 09:02:18',
     vehicleCard: 'VC-90005',
     entryCard: '',
+    preEntryAt: '2026-08-25 09:02:18',
   },
   {
     plate: '湘C92223',
     planId: '831103931018260481',
-    permit: 'forbidden',
-    preEntryAt: '2026-08-25 09:18:41',
     vehicleCard: 'VC-92223',
     entryCard: 'YC-TMP-8821',
+    preEntryAt: '2026-08-25 09:18:41',
   },
   {
     plate: '桂A8T216',
     planId: '831103931018260482',
-    permit: 'allowed',
-    preEntryAt: '2026-08-25 08:40:05',
     vehicleCard: 'VC-8T216',
     entryCard: 'YC-FIX-1107',
+    preEntryAt: '2026-08-25 08:40:05',
   },
 ];
 
@@ -254,7 +332,7 @@ export const INITIAL_RECORDS: EntryRecord[] = [
     weighPos: '1#汽车衡',
     samplePos: '2#机械采样机',
     enterAt: '2026-08-25 07:21:09',
-    status: 'registered',
+    status: 'exited',
     entryCard: 'YC-FIX-1094',
     siteId: 'south',
   },
@@ -263,10 +341,10 @@ export const INITIAL_RECORDS: EntryRecord[] = [
 export const findPlan = (id: string) => PLANS.find((p) => p.id === id);
 export const findPlanByPlate = (plate: string) =>
   PLANS.find((p) => p.plate.replace(/\s/g, '') === plate.replace(/\s/g, ''));
+
 export const findPreEntry = (plate: string) =>
   PRE_ENTRIES.find((p) => p.plate.replace(/\s/g, '') === plate.replace(/\s/g, ''));
 
-/** 按车牌查询计划与预入厂记录 */
 export const lookupVehicleByPlate = (plate: string) => {
   const key = plate.trim().replace(/\s/g, '');
   if (!key) return null;
@@ -276,9 +354,6 @@ export const lookupVehicleByPlate = (plate: string) => {
   return { plan, pre: pre ?? null };
 };
 
-export const isKnownPlate = (plate: string) => !!lookupVehicleByPlate(plate);
-
-/** 输入三位及以上时，按车牌前缀/包含关系联想候选 */
 export const searchPlates = (query: string) => {
   const key = query.trim().replace(/\s/g, '').toUpperCase();
   if (key.length < 3) return [];
@@ -287,11 +362,16 @@ export const searchPlates = (query: string) => {
     const plate = plan.plate.replace(/\s/g, '').toUpperCase();
     if (plate.includes(key)) hits.add(plan.plate);
   }
-  for (const pre of PRE_ENTRIES) {
-    const plate = pre.plate.replace(/\s/g, '').toUpperCase();
-    if (plate.includes(key)) hits.add(pre.plate);
-  }
   return Array.from(hits);
+};
+
+/** 中国大陆车牌简易校验 */
+export const isValidPlate = (plate: string) => {
+  const p = plate.trim().replace(/\s/g, '');
+  if (p.length < 7) return false;
+  return /^[京津沪渝冀豫云辽黑湘皖鲁新苏浙赣鄂桂甘晋蒙陕吉闽贵粤青藏川宁琼使领][A-HJ-NP-Z][A-HJ-NP-Z0-9]{4,5}[A-HJ-NP-Z0-9挂学警港澳]?$/.test(
+    p,
+  );
 };
 
 export const nextSerial = (records: EntryRecord[]) => {
@@ -333,14 +413,13 @@ export const yunyiExpiredSample = () => {
   ].join('|');
 };
 
-export const mineCardSample = (plate = '蒙A90005') => {
-  const plan = findPlanByPlate(plate) ?? PLANS[0];
-  return `${plate}OreadWriteOaObO${plan.plate}O${plan.id}O${plan.gross}O${plan.tare}O`;
-};
-
 export const formatStamp = (d: Date) => {
   const p = (n: number) => String(n).padStart(2, '0');
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(
     d.getMinutes(),
   )}:${p(d.getSeconds())}`;
 };
+
+export const uniqueSuppliers = () => Array.from(new Set(PLANS.map((p) => p.supplier)));
+export const uniqueMines = () => Array.from(new Set(PLANS.map((p) => p.mine)));
+export const uniqueCoalTypes = () => Array.from(new Set(PLANS.map((p) => p.coalType)));

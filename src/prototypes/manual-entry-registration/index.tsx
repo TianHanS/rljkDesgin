@@ -6,62 +6,65 @@
  * - /rules/development-standards.md
  * - /src/themes/antd-new/DESIGN-SPEC.md
  * - /skills/default-design-guide-minimal/SKILL.md
- * - 用户提供的人工入厂登记截图与功能需求
+ * - 用户提供的人工入厂登记业务规约
  */
 import React, { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
   Button,
   ConfigProvider,
-  Descriptions,
-  Drawer,
-  Modal,
+  Select,
   Space,
+  Spin,
   Table,
+  Tabs,
   Tag,
-  Tooltip,
   message,
 } from 'antd';
 import {
-  ArrowLeftOutlined,
   ClearOutlined,
   CreditCardOutlined,
-  IdcardOutlined,
   PlusSquareOutlined,
   QrcodeOutlined,
-  QuestionCircleOutlined,
   ScanOutlined,
 } from '@ant-design/icons';
 import zhCN from 'antd/locale/zh_CN';
 import dayjs, { type Dayjs } from 'dayjs';
 import type { ColumnsType } from 'antd/es/table';
 import './style.css';
+import CardSearchDrawer, { type CardResult } from './components/CardSearchDrawer';
+import FormFieldRow from './components/FormFieldRow';
+import PlanSelectDrawer from './components/PlanSelectDrawer';
+import PlanScanModal from './components/PlanScanModal';
+import PlateInput from './components/PlateInput';
+import YunyiScanModal from './components/YunyiScanModal';
 import {
   INITIAL_RECORDS,
-  PLANS,
-  PRE_ENTRIES,
+  MODULE_MENUS,
+  SAMPLE_METHODS,
   SAMPLE_POSITIONS,
   SITES,
   WEIGH_POSITIONS,
   findPlan,
+  getModuleFieldConfig,
+  getModuleOperationConfig,
+  isFieldEditable,
+  isFieldVisible,
+  isOperationEnabled,
   lookupVehicleByPlate,
-  mineCardSample,
   nextSerial,
+  readCachedSiteId,
+  writeCachedSiteId,
   type CoalPlan,
   type EntryRecord,
-  type PreEntryVehicle,
-  type SiteConfig,
+  type FieldKey,
+  type ModuleCode,
+  type OperationKey,
 } from './data';
-import { applyPlan, isYunyiFresh, parseMineCard, parseYunyi } from './parse';
-import AllowEntryDrawer, { ALLOW_ENTRY_TOOLTIP } from './components/AllowEntryDrawer';
-import PlanSelectModal from './components/PlanSelectModal';
-import PlateInput from './components/PlateInput';
-import ScanModal, { type ScanKind } from './components/ScanModal';
-import SiteSelectPanel from './components/SiteSelectPanel';
-import UnderlineField from './components/UnderlineField';
-import YunyiScanModal from './components/YunyiScanModal';
+import { applyPlan, isYunyiFresh, parseYunyi } from './parse';
 
 interface FormValues {
   plate?: string;
+  vehicleCard?: string;
   supplier?: string;
   mine?: string;
   coalType?: string;
@@ -76,11 +79,14 @@ interface FormValues {
   weighPos?: string;
   unloadArea?: string;
   sampleMethod?: string;
+  entryCard?: string;
   planId?: string;
+  taskNo?: string;
 }
 
 const emptyForm = (): FormValues => ({
   plate: undefined,
+  vehicleCard: undefined,
   supplier: undefined,
   mine: undefined,
   coalType: undefined,
@@ -91,176 +97,92 @@ const emptyForm = (): FormValues => ({
   net: null,
   shipTime: null,
   station: undefined,
-  samplePos: undefined,
-  weighPos: undefined,
+  samplePos: SAMPLE_POSITIONS[0],
+  weighPos: WEIGH_POSITIONS[0],
   unloadArea: undefined,
   sampleMethod: '机械采样',
+  entryCard: undefined,
   planId: undefined,
+  taskNo: undefined,
 });
 
 const ManualEntryRegistration: React.FC = () => {
+  const cachedSite = readCachedSiteId();
+  const defaultSite = SITES.find((s) => s.id === cachedSite) ?? SITES[0];
+
+  const [siteId, setSiteId] = useState(defaultSite.id);
+  const [moduleCode, setModuleCode] = useState<ModuleCode>('coal-entry');
   const [values, setValues] = useState<FormValues>(emptyForm);
-  const [siteId, setSiteId] = useState<string | null>(null);
-  const [vehicles, setVehicles] = useState<PreEntryVehicle[]>(() =>
-    PRE_ENTRIES.map((v) => ({ ...v })),
-  );
+  const [records, setRecords] = useState<EntryRecord[]>(INITIAL_RECORDS);
+  const [submitting, setSubmitting] = useState(false);
+  const [planOpen, setPlanOpen] = useState(false);
+  const [yunyiOpen, setYunyiOpen] = useState(false);
+  const [planScanOpen, setPlanScanOpen] = useState(false);
+  const [cardSearchOpen, setCardSearchOpen] = useState(false);
+  const [writingCardId, setWritingCardId] = useState<string | null>(null);
   const listBodyRef = useRef<HTMLDivElement>(null);
   const [tableY, setTableY] = useState(180);
-  const [records, setRecords] = useState<EntryRecord[]>(INITIAL_RECORDS);
-  const [planOpen, setPlanOpen] = useState(false);
-  const [allowOpen, setAllowOpen] = useState(false);
-  const [yunyiScanOpen, setYunyiScanOpen] = useState(false);
-  const [scan, setScan] = useState<{ open: boolean; kind: ScanKind; loading: boolean }>({
-    open: false,
-    kind: 'plan-qr',
-    loading: false,
-  });
-  const [view, setView] = useState<EntryRecord | null>(null);
-  const [scanBusy, setScanBusy] = useState<ScanKind | null>(null);
 
-  const site = siteId ? SITES.find((s) => s.id === siteId) : undefined;
-  const livePre = values.plate
-    ? vehicles.find((v) => v.plate.replace(/\s/g, '') === values.plate!.replace(/\s/g, ''))
-    : undefined;
+  const site = SITES.find((s) => s.id === siteId)!;
+  const fieldCfg = useMemo(() => getModuleFieldConfig(site.moduleCode), [site.moduleCode]);
+  const opCfg = useMemo(() => getModuleOperationConfig(site.moduleCode), [site.moduleCode]);
 
+  const permittedModules = MODULE_MENUS.filter((m) => m.permitted);
   const patch = (next: Partial<FormValues>) => setValues((prev) => ({ ...prev, ...next }));
 
-  const fillPlan = (plan: CoalPlan, withWeights: boolean) => {
+  const fillPlan = (plan: CoalPlan) => {
     const base = applyPlan(plan);
     setValues((prev) => ({
       ...prev,
       ...base,
       shipTime: plan.shipTime ? dayjs(plan.shipTime) : null,
+      gross: plan.gross,
+      tare: plan.tare,
+      net: plan.net,
+      samplePos: plan.samplePos || prev.samplePos || SAMPLE_POSITIONS[0],
+      weighPos: plan.weighPos || prev.weighPos || WEIGH_POSITIONS[0],
       sampleMethod: prev.sampleMethod || '机械采样',
-      samplePos: prev.samplePos || SAMPLE_POSITIONS[0],
-      weighPos: prev.weighPos || WEIGH_POSITIONS[0],
-      ...(withWeights ? { gross: plan.gross, tare: plan.tare, net: plan.net } : {}),
+      taskNo: plan.taskNo,
     }));
   };
 
-  const shouldFillWeights = (cfg: SiteConfig, from: 'plan' | 'pre' | 'card' | 'yunyi') => {
-    if (cfg.GET_ORIGINAL_MSG === 1) return from === 'pre' || from === 'plan';
-    if (cfg.GET_ORIGINAL_MSG === 2) return from === 'card' || from === 'plan';
-    if (cfg.GET_ORIGINAL_MSG === 3) return from === 'plan' || from === 'pre';
-    if (cfg.GET_ORIGINAL_MSG === 4) return from === 'yunyi' || from === 'plan';
-    return false;
-  };
-
-  const openScan = (kind: ScanKind) => {
-    if (kind === 'yunyi') {
-      setScanBusy('yunyi');
-      window.setTimeout(() => {
-        setScanBusy(null);
-        setYunyiScanOpen(true);
-      }, 450);
-      return;
+  const fillFromPlate = (plate: string) => {
+    const hit = lookupVehicleByPlate(plate);
+    if (hit) {
+      const { plan, pre } = hit;
+      fillPlan(plan);
+      patch({
+        plate: plan.plate,
+        vehicleCard: pre?.vehicleCard,
+        entryCard: pre?.entryCard || undefined,
+      });
+      message.success(`已加载 ${plan.plate} 关联信息`);
+    } else {
+      patch({ plate });
+      message.warning('未查到该车牌关联信息');
     }
-    setScanBusy(kind);
-    window.setTimeout(() => {
-      setScanBusy(null);
-      setScan({ open: true, kind, loading: false });
-    }, 450);
   };
 
   const handlePlanPick = (plan: CoalPlan) => {
-    fillPlan(plan, shouldFillWeights(site, 'plan'));
+    fillPlan(plan);
     setPlanOpen(false);
-    message.success(`已回填计划 ${plan.serialNo}`);
+    message.success('计划信息已回填');
   };
 
-  const loadPreEntryWeights = () => {
-    if (!values.plate?.trim()) {
-      message.warning('请先输入或选择车牌号码');
+  const handlePlanScan = (planId: string) => {
+    const plan = findPlan(planId);
+    if (!plan) {
+      message.error('未查询到计划信息');
       return;
     }
-    fillFromPlate(values.plate.trim());
-  };
-
-  const fillFromPlate = (plate: string, silent = false) => {
-    const hit = lookupVehicleByPlate(plate);
-    if (hit) {
-      const { plan } = hit;
-      const base = applyPlan(plan);
-      setValues((prev) => ({
-        ...prev,
-        ...base,
-        plate: plan.plate,
-        shipTime: plan.shipTime ? dayjs(plan.shipTime) : null,
-        gross: plan.gross,
-        tare: plan.tare,
-        net: plan.net,
-        sampleMethod: prev.sampleMethod || '机械采样',
-        samplePos: prev.samplePos || SAMPLE_POSITIONS[0],
-        weighPos: prev.weighPos || WEIGH_POSITIONS[0],
-      }));
-      if (!silent) message.success(`已加载 ${plan.plate} 车辆信息（含矿发毛皮净）`);
-    } else {
-      patch({ plate });
-      if (!silent) message.warning('未查到该车牌关联信息');
-    }
-  };
-
-  const handleScan = (raw: string) => {
-    if (scan.kind === 'plan-qr') {
-      const plan = findPlan(raw.trim());
-      if (!plan) {
-        message.error('未查询到入厂计划信息');
-        return;
-      }
-      fillPlan(plan, shouldFillWeights(site, 'plan'));
-      setScan((s) => ({ ...s, open: false }));
-      message.success('计划二维码已回填');
-      return;
-    }
-    const card = parseMineCard(raw);
-    if (!card) {
-      message.error('矿发卡内容无法解析');
-      return;
-    }
-    const formPlate = (values.plate || '').trim();
-    const applyCard = () => {
-      const plan = findPlan(card.planId);
-      if (!plan) {
-        message.error('未查询到入厂计划信息');
-        return;
-      }
-      const base = applyPlan(plan);
-      setValues((prev) => ({
-        ...prev,
-        ...base,
-        plate: formPlate || card.cardPlate,
-        shipTime: plan.shipTime ? dayjs(plan.shipTime) : null,
-        sampleMethod: prev.sampleMethod || '机械采样',
-        samplePos: prev.samplePos || SAMPLE_POSITIONS[0],
-        weighPos: prev.weighPos || WEIGH_POSITIONS[0],
-        ...(shouldFillWeights(site, 'card')
-          ? {
-              gross: card.gross,
-              tare: card.tare,
-              net: Number((card.gross - card.tare).toFixed(3)),
-            }
-          : {}),
-      }));
-      setScan((s) => ({ ...s, open: false }));
-      message.success('矿发卡已回填');
-    };
-    if (formPlate && formPlate !== card.cardPlate) {
-      Modal.confirm({
-        title: '车牌不一致',
-        content: `输入车牌与读卡车辆车牌不匹配，矿发卡车牌为：${card.cardPlate}`,
-        okText: '仍使用读卡结果',
-        cancelText: '取消',
-        onOk: applyCard,
-      });
-      return;
-    }
-    applyCard();
+    fillPlan(plan);
+    message.success('计划码扫码成功');
   };
 
   const handleYunyiScan = (raw: string) => {
     const parsed = parseYunyi(raw);
     if (!parsed) {
-      message.error('云驿二维码格式无法解析');
+      message.error('二维码格式无法解析');
       return;
     }
     if (!isYunyiFresh(parsed.qrTime)) {
@@ -269,7 +191,7 @@ const ManualEntryRegistration: React.FC = () => {
     }
     const plan = findPlan(parsed.planId);
     if (!plan) {
-      message.error('未查询到入厂计划信息');
+      message.error('未查询到计划信息');
       return;
     }
     const base = applyPlan(plan);
@@ -281,49 +203,42 @@ const ManualEntryRegistration: React.FC = () => {
       gross: parsed.gross,
       tare: parsed.tare,
       net: parsed.net,
+      taskNo: parsed.taskNo,
       sampleMethod: prev.sampleMethod || '机械采样',
-      samplePos: prev.samplePos || SAMPLE_POSITIONS[0],
-      weighPos: prev.weighPos || WEIGH_POSITIONS[0],
+      samplePos: prev.samplePos || plan.samplePos,
+      weighPos: prev.weighPos || plan.weighPos,
     }));
-    message.success('云驿二维码已识别，已加载车辆信息与矿发毛皮净');
+    message.success('扫码成功');
   };
 
-  const handleAllowConfirm = (reason: string) => {
-    const plate = values.plate?.trim();
-    if (!plate) return;
-    setVehicles((list) => list.map((v) => (v.plate === plate ? { ...v, permit: 'allowed' } : v)));
-    setAllowOpen(false);
-    message.success(`${plate} 已人工允许入厂（${reason}）`);
+  const handleCardApply = (result: CardResult) => {
+    fillPlan(result.plan);
+    patch({
+      plate: result.plate,
+      entryCard: result.cardNo,
+    });
+    message.success('煤样卡信息已回填');
   };
 
-  const submit = () => {
-    const plate = values.plate?.trim();
-    if (!plate) {
-      message.error('请先输入车牌号码');
-      return;
+  const validateForm = (): boolean => {
+    if (!values.plate?.trim()) {
+      message.error('请填写车牌号码');
+      return false;
     }
     if (values.net == null || Number.isNaN(Number(values.net))) {
-      message.error('缺少矿发净重，请先选择计划或扫码回填');
-      return;
+      message.error('请填写矿发净重');
+      return false;
     }
-    if (!values.shipTime) {
-      message.error('缺少发站时间，请先选择计划或扫码回填');
-      return;
-    }
-    if (!values.unloadArea) {
-      message.error('缺少卸煤区域，请先选择计划或扫码回填');
-      return;
-    }
-    if (site.SAMPLE_MEASURE_EDIT === 1 && (!values.samplePos || !values.weighPos)) {
-      message.error('缺少采样位或过衡位');
-      return;
-    }
-    const permit = vehicles.find((v) => v.plate === plate);
-    if (permit?.permit === 'forbidden') {
-      message.error('该车辆仍为禁止入厂，请先办理允许入厂');
-      setAllowOpen(true);
-      return;
-    }
+    return true;
+  };
+
+  const doSubmit = async (mode: 'normal' | 'pre' | 'withCard') => {
+    if (!validateForm()) return;
+    setSubmitting(true);
+    await new Promise((r) => window.setTimeout(r, 800));
+    setSubmitting(false);
+
+    const plate = values.plate!.trim();
     const serialNo = nextSerial(records);
     const now = dayjs().format('YYYY-MM-DD HH:mm:ss');
     const row: EntryRecord = {
@@ -339,17 +254,61 @@ const ManualEntryRegistration: React.FC = () => {
       samplePos: values.samplePos || '—',
       enterAt: now,
       status: 'registered',
-      entryCard: '',
+      entryCard: values.entryCard || '',
       siteId: site.id,
+      taskNo: values.taskNo,
     };
+
+    if (mode === 'withCard') {
+      message.loading({ content: '正在写卡，请勿移动卡片', key: 'write', duration: 0 });
+      await new Promise((r) => window.setTimeout(r, 1200));
+      message.destroy('write');
+      row.entryCard = `YC-${Date.now().toString().slice(-6)}`;
+      message.success('写卡成功');
+    }
+
     setRecords((list) => [row, ...list]);
     setValues(emptyForm());
-    message.success(
-      `登记成功。道闸已抬杆，LED「${plate} 登记成功」，广播「${plate} 请入厂，前往${values.samplePos || '采样位'} ${values.weighPos || '过衡位'}」`,
-    );
+    message.success(mode === 'pre' ? '预登记成功' : '登记成功');
   };
 
-  const filteredRecords = records.filter((r) => r.siteId === site.id);
+  const reissueCard = async (row: EntryRecord) => {
+    setWritingCardId(row.id);
+    message.loading({ content: '正在写卡，请勿移动卡片', key: 'reissue', duration: 0 });
+    const ok = await new Promise<boolean>((resolve) => {
+      window.setTimeout(() => resolve(Math.random() > 0.15), 2200);
+    });
+    message.destroy('reissue');
+    setWritingCardId(null);
+    if (!ok) {
+      message.error('写卡失败');
+      return;
+    }
+    const card = `YC-R${Date.now().toString().slice(-5)}`;
+    setRecords((list) =>
+      list.map((r) => (r.id === row.id ? { ...r, entryCard: card } : r)),
+    );
+    message.success('补发煤样卡成功');
+  };
+
+  const handleSiteChange = (id: string) => {
+    setSiteId(id);
+    writeCachedSiteId(id);
+    setValues(emptyForm());
+  };
+
+  const showOp = (key: OperationKey) => isOperationEnabled(key, opCfg);
+  const showField = (key: FieldKey) => isFieldVisible(key, fieldCfg);
+  const editField = (key: FieldKey) => isFieldEditable(key, fieldCfg);
+
+  const listOpsVisible = showOp('OPERATION_cardNo1Write');
+  const filteredRecords = useMemo(
+    () =>
+      records
+        .filter((r) => r.siteId === site.id)
+        .sort((a, b) => dayjs(b.enterAt).valueOf() - dayjs(a.enterAt).valueOf()),
+    [records, site.id],
+  );
 
   useLayoutEffect(() => {
     const el = listBodyRef.current;
@@ -363,7 +322,7 @@ const ManualEntryRegistration: React.FC = () => {
     const ro = new ResizeObserver(sync);
     ro.observe(el);
     return () => ro.disconnect();
-  }, [filteredRecords.length, siteId]);
+  }, [filteredRecords.length, siteId, moduleCode]);
 
   const columns: ColumnsType<EntryRecord> = [
     { title: '序号', width: 56, render: (_, __, i) => i + 1 },
@@ -381,166 +340,246 @@ const ManualEntryRegistration: React.FC = () => {
       title: '状态',
       dataIndex: 'status',
       width: 80,
-      render: () => <Tag>已登记</Tag>,
+      render: (s: EntryRecord['status']) =>
+        s === 'exited' ? <Tag>已出厂</Tag> : <Tag color="processing">在厂</Tag>,
     },
-    {
-      title: '操作',
-      width: 72,
-      render: (_, row) => (
-        <Button type="link" size="small" onClick={() => setView(row)}>
-          查看
-        </Button>
-      ),
-    },
+    ...(listOpsVisible
+      ? [
+          {
+            title: '操作',
+            width: 110,
+            fixed: 'right' as const,
+            render: (_: unknown, row: EntryRecord) =>
+              row.status === 'exited' ? (
+                '—'
+              ) : (
+                <Button
+                  type="link"
+                  size="small"
+                  loading={writingCardId === row.id}
+                  onClick={() => reissueCard(row)}
+                >
+                  补发煤样卡
+                </Button>
+              ),
+          },
+        ]
+      : []),
   ];
 
-  const scanSamples = useMemo(() => {
-    if (scan.kind === 'plan-qr') return [{ label: '示例计划 ID', value: PLANS[0].id }];
-    return [
-      { label: '矿发卡 蒙A90005', value: mineCardSample('蒙A90005') },
-      { label: '矿发卡 湘C92223（用于车牌不一致）', value: mineCardSample('湘C92223') },
-    ];
-  }, [scan.kind]);
-
   const weightText = (n?: number | null) =>
-    n === undefined || n === null || Number.isNaN(Number(n)) ? undefined : `${Number(n)} t`;
+    n === undefined || n === null || Number.isNaN(Number(n)) ? undefined : `${Number(n).toFixed(2)} t`;
 
-  const permitNode = () => {
-    if (!values.plate?.trim() || !livePre) return undefined;
-    if (livePre.permit === 'allowed') return <Tag color="success">是</Tag>;
-    return <Tag color="error">否</Tag>;
-  };
-
-  const allowDisabled = !values.plate?.trim() || livePre?.permit !== 'forbidden';
-
-  const backToSiteSelect = () => {
-    setSiteId(null);
-    setValues(emptyForm());
-  };
-
-  if (!siteId || !site) {
-    return (
-      <ConfigProvider locale={zhCN} componentSize="small">
-        <div className="mer-root mer-root-select">
-          <SiteSelectPanel
-            sites={SITES}
-            onSelect={(id) => {
-              setSiteId(id);
-              setValues(emptyForm());
-            }}
-          />
+  const renderCoalEntryForm = () => (
+    <>
+      <div className="mer-card-bd">
+        <div className="mer-form-grid">
+          <div>
+            <p className="mer-col-title">来煤信息</p>
+            {showField('FIELD_vehicleNo') && (
+              <PlateInput
+                value={values.plate}
+                onChange={(plate) => patch({ plate })}
+                onSelect={fillFromPlate}
+              />
+            )}
+            {showField('FIELD_cardNo') && (
+              <FormFieldRow label="车辆卡号" value={values.vehicleCard} />
+            )}
+            <FormFieldRow label="供应商" value={values.supplier} />
+            <FormFieldRow label="矿点" value={values.mine} />
+            <FormFieldRow label="煤种" value={values.coalType} />
+            <FormFieldRow label="运输单位" value={values.transporter} />
+            <FormFieldRow label="品名" value={values.productName} />
+          </div>
+          <div>
+            <p className="mer-col-title">矿发信息</p>
+            {showField('FIELD_mineHairGrossWeight') && (
+              <FormFieldRow
+                label="矿发毛重"
+                required
+                editable={editField('FIELD_mineHairGrossWeight')}
+                value={weightText(values.gross)}
+                numberValue={values.gross}
+                onNumberChange={(gross) => patch({ gross })}
+              />
+            )}
+            {showField('FIELD_mineHairTare') && (
+              <FormFieldRow
+                label="矿发皮重"
+                editable={editField('FIELD_mineHairTare')}
+                value={weightText(values.tare)}
+                numberValue={values.tare}
+                onNumberChange={(tare) => patch({ tare })}
+              />
+            )}
+            {showField('FIELD_ticketHeight') && (
+              <FormFieldRow
+                label="矿发净重"
+                required
+                editable={editField('FIELD_ticketHeight')}
+                value={weightText(values.net)}
+                numberValue={values.net}
+                onNumberChange={(net) => patch({ net })}
+              />
+            )}
+            <FormFieldRow label="发站" value={values.station} />
+            {showField('FIELD_fromDate') && (
+              <FormFieldRow
+                label="发站时间"
+                value={values.shipTime ? values.shipTime.format('YYYY-MM-DD HH:mm:ss') : undefined}
+              />
+            )}
+          </div>
+          <div>
+            <p className="mer-col-title">入厂信息</p>
+            {showField('FIELD_simplingSource') && (
+              <FormFieldRow
+                label="采样方式"
+                required
+                editable={editField('FIELD_simplingSource')}
+                value={values.sampleMethod}
+                selectValue={values.sampleMethod}
+                selectOptions={[...SAMPLE_METHODS]}
+                onSelectChange={(sampleMethod) => patch({ sampleMethod })}
+              />
+            )}
+            {showField('FIELD_simplingName') && (
+              <FormFieldRow
+                label="采样位"
+                editable={editField('FIELD_simplingName')}
+                value={values.samplePos}
+                selectValue={values.samplePos}
+                selectOptions={SAMPLE_POSITIONS}
+                onSelectChange={(samplePos) => patch({ samplePos })}
+              />
+            )}
+            {showField('FIELD_poundName') && (
+              <FormFieldRow
+                label="过衡位"
+                editable={editField('FIELD_poundName')}
+                value={values.weighPos}
+                selectValue={values.weighPos}
+                selectOptions={WEIGH_POSITIONS}
+                onSelectChange={(weighPos) => patch({ weighPos })}
+              />
+            )}
+            <FormFieldRow label="卸煤区域" value={values.unloadArea} required />
+            {showField('FIELD_cardNo1') && (
+              <FormFieldRow label="入厂卡/煤样卡" value={values.entryCard} />
+            )}
+          </div>
         </div>
-      </ConfigProvider>
-    );
-  }
+      </div>
+
+      <div className="mer-footer-actions">
+        <Space wrap>
+          {showOp('OPERATION_enterComfire') && (
+            <Button type="primary" loading={submitting} onClick={() => doSubmit('normal')}>
+              确认登记
+            </Button>
+          )}
+          {showOp('OPERATION_preEnterComfire') && (
+            <Button loading={submitting} onClick={() => doSubmit('pre')}>
+              确认预登记
+            </Button>
+          )}
+          {showOp('OPERATION_cardNo1WriteAndenterComfire') && (
+            <Button type="primary" ghost loading={submitting} onClick={() => doSubmit('withCard')}>
+              确认登记并发卡
+            </Button>
+          )}
+          <Button icon={<ClearOutlined />} onClick={() => setValues(emptyForm())}>
+            清除重置
+          </Button>
+        </Space>
+      </div>
+    </>
+  );
+
+  const renderModuleBody = () => {
+    if (moduleCode === 'coal-entry' || moduleCode === 'transfer-coal') {
+      return renderCoalEntryForm();
+    }
+    if (moduleCode === 'exit') {
+      return (
+        <div className="mer-module-placeholder">
+          <p>出厂登记：请扫描出厂凭证或选择待出厂车辆完成登记（原型占位）。</p>
+        </div>
+      );
+    }
+    return null;
+  };
 
   return (
     <ConfigProvider locale={zhCN} componentSize="small">
       <div className="mer-root">
+        <div className="mer-toolbar">
+          <Space wrap size={[12, 8]}>
+            <span className="mer-site-label">入厂点</span>
+            <Select
+              style={{ width: 168 }}
+              value={siteId}
+              options={SITES.map((s) => ({ value: s.id, label: s.name }))}
+              onChange={handleSiteChange}
+            />
+            <Tabs
+              className="mer-module-tabs"
+              activeKey={moduleCode}
+              items={permittedModules.map((m) => ({ key: m.code, label: m.label }))}
+              onChange={(key) => {
+                setModuleCode(key as ModuleCode);
+                setValues(emptyForm());
+              }}
+            />
+          </Space>
+          {showOp('OPERATION_yunYiCodeAuto') && (
+            <Tag color="gold" className="mer-auto-tag">
+              云驿自动模式（待定）
+            </Tag>
+          )}
+        </div>
+
         <section className="mer-card mer-form-card">
           <div className="mer-card-hd">
             <h2>
-              登记入厂信息
+              {moduleCode === 'transfer-coal' ? '转场煤登记' : moduleCode === 'exit' ? '出厂登记' : '来煤登记'}
               <Tag color="processing" className="mer-current-site">
                 {site.name}
               </Tag>
             </h2>
-            <div className="mer-card-actions">
-              <Button type="link" icon={<ArrowLeftOutlined />} className="mer-switch-site" onClick={backToSiteSelect}>
-                切换登记点
-              </Button>
-              {(site.GET_PLAN_MSG === 1 || site.GET_PLAN_MSG === 2) && (
-                <Button icon={<PlusSquareOutlined />} onClick={() => setPlanOpen(true)}>
-                  选择计划
-                </Button>
-              )}
-              {site.GET_PLAN_MSG === 2 && (
-                <Button icon={<QrcodeOutlined />} loading={scanBusy === 'plan-qr'} onClick={() => openScan('plan-qr')}>
-                  扫描计划二维码
-                </Button>
-              )}
-              {(site.GET_PLAN_MSG === 4 || site.GET_ORIGINAL_MSG === 2) && (
-                <Button icon={<CreditCardOutlined />} loading={scanBusy === 'mine-card'} onClick={() => openScan('mine-card')}>
-                  读矿发卡
-                </Button>
-              )}
-              {site.GET_ORIGINAL_MSG === 1 && (
-                <Button icon={<IdcardOutlined />} onClick={loadPreEntryWeights}>
-                  获取预入厂信息
-                </Button>
-              )}
-              <Button icon={<ScanOutlined />} loading={scanBusy === 'yunyi'} onClick={() => openScan('yunyi')}>
-                扫描云驿二维码
-              </Button>
-            </div>
-          </div>
-
-          <div className="mer-card-bd">
-            <div className="mer-form-grid">
-              <div>
-                <p className="mer-col-title">来煤信息</p>
-                <PlateInput
-                  value={values.plate}
-                  onChange={(plate) => patch({ plate })}
-                  onSelect={fillFromPlate}
-                  onQuery={fillFromPlate}
-                />
-                <UnderlineField label="供应商" value={values.supplier} />
-                <UnderlineField label="矿点" value={values.mine} />
-                <UnderlineField label="煤种" value={values.coalType} />
-                <UnderlineField label="运输单位" value={values.transporter} />
-                <UnderlineField label="品名" value={values.productName} />
+            {(moduleCode === 'coal-entry' || moduleCode === 'transfer-coal') && (
+              <div className="mer-card-actions">
+                {showOp('OPERATION_manualSelectPlan') && (
+                  <Button icon={<PlusSquareOutlined />} onClick={() => setPlanOpen(true)}>
+                    人工选择计划
+                  </Button>
+                )}
+                {showOp('OPERATION_planCode') && (
+                  <Button icon={<QrcodeOutlined />} onClick={() => setPlanScanOpen(true)}>
+                    计划码扫码
+                  </Button>
+                )}
+                {showOp('OPERATION_yunYiCode') && (
+                  <Button icon={<ScanOutlined />} onClick={() => setYunyiOpen(true)}>
+                    云驿扫码
+                  </Button>
+                )}
+                {showOp('OPERATION_cardNo1Search') && (
+                  <Button icon={<CreditCardOutlined />} onClick={() => setCardSearchOpen(true)}>
+                    煤样卡查询
+                  </Button>
+                )}
               </div>
-              <div>
-                <p className="mer-col-title">矿发信息</p>
-                <UnderlineField label="矿发毛重" value={weightText(values.gross)} />
-                <UnderlineField label="矿发皮重" value={weightText(values.tare)} />
-                <UnderlineField label="矿发净重" value={weightText(values.net)} required />
-                <UnderlineField
-                  label="发站时间"
-                  value={values.shipTime ? values.shipTime.format('YYYY-MM-DD HH:mm:ss') : undefined}
-                  required
-                />
-                <UnderlineField label="发站" value={values.station} />
-              </div>
-              <div>
-                <p className="mer-col-title">入厂信息</p>
-                <UnderlineField label="采样方式" value={values.sampleMethod} required />
-                <UnderlineField label="采样位" value={values.samplePos} required={site.SAMPLE_MEASURE_EDIT === 1} />
-                <UnderlineField label="过衡位" value={values.weighPos} required={site.SAMPLE_MEASURE_EDIT === 1} />
-                <UnderlineField label="卸煤区域" value={values.unloadArea} required />
-                <div className="mer-ufield">
-                  <span className="mer-ufield-label">允许入厂</span>
-                  <span className="mer-ufield-value mer-ufield-permit">
-                    {permitNode() ?? <span className="is-empty">—</span>}
-                    <Tooltip title={ALLOW_ENTRY_TOOLTIP}>
-                      <QuestionCircleOutlined className="mer-permit-help" aria-label="允许入厂说明" />
-                    </Tooltip>
-                  </span>
-                </div>
-              </div>
-            </div>
+            )}
           </div>
-
-          <div className="mer-footer-actions">
-            <Space>
-              <Button type="primary" onClick={submit}>
-                确认登记
-              </Button>
-              <Button disabled={allowDisabled} onClick={() => setAllowOpen(true)}>
-                允许入厂
-              </Button>
-              <Button icon={<ClearOutlined />} onClick={() => setValues(emptyForm())}>
-                清空
-              </Button>
-            </Space>
-          </div>
+          {renderModuleBody()}
         </section>
 
         <section className="mer-card mer-list-card">
           <div className="mer-card-hd">
-            <h2>入厂登记记录</h2>
-            <span className="mer-list-count">共 {filteredRecords.length} 条</span>
+            <h2>入厂车辆列表</h2>
+            <span className="mer-list-count">共 {filteredRecords.length} 条 · 按入厂时间倒序</span>
           </div>
           <div className="mer-list-body" ref={listBodyRef}>
             <Table
@@ -554,47 +593,24 @@ const ManualEntryRegistration: React.FC = () => {
           </div>
         </section>
 
-        <PlanSelectModal open={planOpen} onClose={() => setPlanOpen(false)} onPick={handlePlanPick} />
-        <AllowEntryDrawer
-          open={allowOpen}
-          plate={values.plate}
-          supplier={values.supplier}
-          gross={values.gross}
-          tare={values.tare}
-          net={values.net}
-          permit={livePre?.permit}
-          onClose={() => setAllowOpen(false)}
-          onConfirm={handleAllowConfirm}
+        <PlanSelectDrawer open={planOpen} onClose={() => setPlanOpen(false)} onPick={handlePlanPick} />
+        <YunyiScanModal open={yunyiOpen} onClose={() => setYunyiOpen(false)} onSuccess={handleYunyiScan} />
+        <PlanScanModal
+          open={planScanOpen}
+          onClose={() => setPlanScanOpen(false)}
+          onSubmit={handlePlanScan}
         />
-        <YunyiScanModal
-          open={yunyiScanOpen}
-          onClose={() => setYunyiScanOpen(false)}
-          onSuccess={handleYunyiScan}
+        <CardSearchDrawer
+          open={cardSearchOpen}
+          onClose={() => setCardSearchOpen(false)}
+          onApply={handleCardApply}
         />
-        <ScanModal
-          open={scan.open}
-          kind={scan.kind}
-          loading={scan.loading}
-          samples={scanSamples}
-          onClose={() => setScan((s) => ({ ...s, open: false }))}
-          onSubmit={handleScan}
-        />
-        <Drawer title="登记详情" open={!!view} onClose={() => setView(null)} width={420}>
-          {view ? (
-            <Descriptions size="small" column={1} bordered>
-              <Descriptions.Item label="流水号">{view.serialNo}</Descriptions.Item>
-              <Descriptions.Item label="车牌">{view.plate}</Descriptions.Item>
-              <Descriptions.Item label="供应商">{view.supplier}</Descriptions.Item>
-              <Descriptions.Item label="矿点">{view.mine}</Descriptions.Item>
-              <Descriptions.Item label="煤种">{view.coalType}</Descriptions.Item>
-              <Descriptions.Item label="净重 t">{view.net}</Descriptions.Item>
-              <Descriptions.Item label="采样 / 过衡">
-                {view.samplePos} / {view.weighPos}
-              </Descriptions.Item>
-              <Descriptions.Item label="时间">{view.enterAt}</Descriptions.Item>
-            </Descriptions>
-          ) : null}
-        </Drawer>
+
+        {submitting && (
+          <div className="mer-global-spin">
+            <Spin tip="正在提交登记…" />
+          </div>
+        )}
       </div>
     </ConfigProvider>
   );

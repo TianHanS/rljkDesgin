@@ -1,10 +1,10 @@
 /**
- * 云驿二维码扫描：请扫码动画 → 识别成功回填车辆信息
+ * 云驿扫码弹窗：扫描司机手机运单二维码
  */
 import React, { useEffect, useRef, useState } from 'react';
 import { Button, Modal, Spin } from 'antd';
 import { CheckCircleFilled, ScanOutlined } from '@ant-design/icons';
-import { yunyiSample } from '../data';
+import { yunyiExpiredSample, yunyiSample } from '../data';
 
 type Phase = 'scanning' | 'success';
 
@@ -26,8 +26,15 @@ const YunyiScanModal: React.FC<Props> = ({ open, onClose, onSuccess }) => {
       return;
     }
     const timer = window.setTimeout(() => inputRef.current?.focus(), 120);
-    return () => window.clearTimeout(timer);
-  }, [open]);
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => {
+      window.clearTimeout(timer);
+      window.removeEventListener('keydown', onKey);
+    };
+  }, [open, onClose]);
 
   const finish = (raw: string) => {
     setPhase('success');
@@ -44,11 +51,9 @@ const YunyiScanModal: React.FC<Props> = ({ open, onClose, onSuccess }) => {
     }
   };
 
-  const simulate = () => finish(yunyiSample());
-
   return (
     <Modal
-      title="扫描云驿二维码"
+      title="云驿扫码"
       open={open}
       onCancel={onClose}
       footer={null}
@@ -60,7 +65,7 @@ const YunyiScanModal: React.FC<Props> = ({ open, onClose, onSuccess }) => {
         ref={inputRef}
         className="mer-hidden-scan-input"
         value={buffer}
-        aria-label="扫码枪输入"
+        aria-label="云驿扫码输入"
         onChange={(e) => setBuffer(e.target.value)}
         onKeyDown={handleKeyDown}
       />
@@ -75,17 +80,20 @@ const YunyiScanModal: React.FC<Props> = ({ open, onClose, onSuccess }) => {
             <span className="mer-yunyi-scan-line" />
             <ScanOutlined className="mer-yunyi-scan-icon" />
           </div>
-          <p className="mer-yunyi-scan-title">请将二维码对准扫码窗口</p>
-          <p className="mer-yunyi-scan-desc">扫码枪识别成功后将自动加载车辆与矿发信息</p>
+          <p className="mer-yunyi-scan-title">请扫描司机手机运单二维码</p>
+          <p className="mer-yunyi-scan-desc">可通过 Esc 快捷键或关闭弹窗退出扫描</p>
           <Spin size="small" />
-          <Button type="dashed" size="small" className="mer-yunyi-scan-demo" onClick={simulate}>
-            模拟扫码成功（蒙A90005）
+          <Button type="dashed" size="small" className="mer-yunyi-scan-demo" onClick={() => finish(yunyiSample())}>
+            模拟扫码成功
+          </Button>
+          <Button type="link" size="small" danger onClick={() => finish(yunyiExpiredSample())}>
+            模拟失效二维码
           </Button>
         </div>
       ) : (
         <div className="mer-yunyi-scan mer-yunyi-scan-ok">
           <CheckCircleFilled className="mer-yunyi-scan-ok-icon" />
-          <p>扫码识别成功，正在加载车辆信息…</p>
+          <p>扫码成功，正在加载…</p>
         </div>
       )}
     </Modal>

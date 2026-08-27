@@ -12,11 +12,11 @@ import React, { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
   Button,
   ConfigProvider,
+  Empty,
   Select,
   Space,
   Spin,
   Table,
-  Tabs,
   Tag,
   message,
 } from 'antd';
@@ -31,14 +31,16 @@ import zhCN from 'antd/locale/zh_CN';
 import dayjs, { type Dayjs } from 'dayjs';
 import type { ColumnsType } from 'antd/es/table';
 import './style.css';
-import CardSearchDrawer, { type CardResult } from './components/CardSearchDrawer';
+import CardSearchDrawer from './components/CardSearchDrawer';
 import FormFieldRow from './components/FormFieldRow';
+import ModuleNav from './components/ModuleNav';
 import PlanSelectDrawer from './components/PlanSelectDrawer';
 import PlanScanModal from './components/PlanScanModal';
 import PlateInput from './components/PlateInput';
 import YunyiScanModal from './components/YunyiScanModal';
 import {
   INITIAL_RECORDS,
+  MODULE_LABELS,
   MODULE_MENUS,
   SAMPLE_METHODS,
   SAMPLE_POSITIONS,
@@ -110,8 +112,11 @@ const ManualEntryRegistration: React.FC = () => {
   const cachedSite = readCachedSiteId();
   const defaultSite = SITES.find((s) => s.id === cachedSite) ?? SITES[0];
 
+  const permittedModules = MODULE_MENUS.filter((m) => m.permitted);
+  const defaultModule = permittedModules[0]?.code ?? 'coal-entry';
+
   const [siteId, setSiteId] = useState(defaultSite.id);
-  const [moduleCode, setModuleCode] = useState<ModuleCode>('coal-entry');
+  const [moduleCode, setModuleCode] = useState<ModuleCode>(defaultModule);
   const [values, setValues] = useState<FormValues>(emptyForm);
   const [records, setRecords] = useState<EntryRecord[]>(INITIAL_RECORDS);
   const [submitting, setSubmitting] = useState(false);
@@ -127,8 +132,9 @@ const ManualEntryRegistration: React.FC = () => {
   const fieldCfg = useMemo(() => getModuleFieldConfig(site.moduleCode), [site.moduleCode]);
   const opCfg = useMemo(() => getModuleOperationConfig(site.moduleCode), [site.moduleCode]);
 
-  const permittedModules = MODULE_MENUS.filter((m) => m.permitted);
   const patch = (next: Partial<FormValues>) => setValues((prev) => ({ ...prev, ...next }));
+
+  const isCoalEntry = moduleCode === 'coal-entry';
 
   const fillPlan = (plan: CoalPlan) => {
     const base = applyPlan(plan);
@@ -209,15 +215,6 @@ const ManualEntryRegistration: React.FC = () => {
       weighPos: prev.weighPos || plan.weighPos,
     }));
     message.success('扫码成功');
-  };
-
-  const handleCardApply = (result: CardResult) => {
-    fillPlan(result.plan);
-    patch({
-      plate: result.plate,
-      entryCard: result.cardNo,
-    });
-    message.success('煤样卡信息已回填');
   };
 
   const validateForm = (): boolean => {
@@ -498,100 +495,102 @@ const ManualEntryRegistration: React.FC = () => {
   );
 
   const renderModuleBody = () => {
-    if (moduleCode === 'coal-entry' || moduleCode === 'transfer-coal') {
-      return renderCoalEntryForm();
-    }
-    if (moduleCode === 'exit') {
-      return (
-        <div className="mer-module-placeholder">
-          <p>出厂登记：请扫描出厂凭证或选择待出厂车辆完成登记（原型占位）。</p>
-        </div>
-      );
-    }
-    return null;
+    if (isCoalEntry) return renderCoalEntryForm();
+
+    return (
+      <div className="mer-module-placeholder">
+        <Empty description="暂未开发" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+      </div>
+    );
   };
+
+  const moduleTitle = MODULE_LABELS[moduleCode];
 
   return (
     <ConfigProvider locale={zhCN} componentSize="small">
       <div className="mer-root">
-        <div className="mer-toolbar">
-          <Space wrap size={[12, 8]}>
+        <header className="mer-context-bar">
+          <div className="mer-context-site">
             <span className="mer-site-label">入厂点</span>
             <Select
-              style={{ width: 168 }}
+              className="mer-site-dropdown"
               value={siteId}
               options={SITES.map((s) => ({ value: s.id, label: s.name }))}
               onChange={handleSiteChange}
             />
-            <Tabs
-              className="mer-module-tabs"
-              activeKey={moduleCode}
-              items={permittedModules.map((m) => ({ key: m.code, label: m.label }))}
-              onChange={(key) => {
-                setModuleCode(key as ModuleCode);
-                setValues(emptyForm());
-              }}
-            />
-          </Space>
+          </div>
+          <ModuleNav
+            menus={permittedModules}
+            active={moduleCode}
+            onChange={(code) => {
+              setModuleCode(code);
+              setValues(emptyForm());
+            }}
+          />
           {showOp('OPERATION_yunYiCodeAuto') && (
             <Tag color="gold" className="mer-auto-tag">
               云驿自动模式（待定）
             </Tag>
           )}
-        </div>
+        </header>
 
         <section className="mer-card mer-form-card">
           <div className="mer-card-hd">
-            <h2>
-              {moduleCode === 'transfer-coal' ? '转场煤登记' : moduleCode === 'exit' ? '出厂登记' : '来煤登记'}
+            <div className="mer-card-title">
+              <h2>{moduleTitle}</h2>
               <Tag color="processing" className="mer-current-site">
                 {site.name}
               </Tag>
-            </h2>
-            {(moduleCode === 'coal-entry' || moduleCode === 'transfer-coal') && (
+            </div>
+            {isCoalEntry && (
               <div className="mer-card-actions">
-                {showOp('OPERATION_manualSelectPlan') && (
-                  <Button icon={<PlusSquareOutlined />} onClick={() => setPlanOpen(true)}>
-                    人工选择计划
-                  </Button>
-                )}
-                {showOp('OPERATION_planCode') && (
-                  <Button icon={<QrcodeOutlined />} onClick={() => setPlanScanOpen(true)}>
-                    计划码扫码
-                  </Button>
-                )}
-                {showOp('OPERATION_yunYiCode') && (
-                  <Button icon={<ScanOutlined />} onClick={() => setYunyiOpen(true)}>
-                    云驿扫码
-                  </Button>
-                )}
-                {showOp('OPERATION_cardNo1Search') && (
-                  <Button icon={<CreditCardOutlined />} onClick={() => setCardSearchOpen(true)}>
-                    煤样卡查询
-                  </Button>
-                )}
+                <span className="mer-action-group-label">数据获取</span>
+                <div className="mer-action-group">
+                  {showOp('OPERATION_manualSelectPlan') && (
+                    <Button icon={<PlusSquareOutlined />} onClick={() => setPlanOpen(true)}>
+                      人工选择计划
+                    </Button>
+                  )}
+                  {showOp('OPERATION_planCode') && (
+                    <Button icon={<QrcodeOutlined />} onClick={() => setPlanScanOpen(true)}>
+                      计划码扫码
+                    </Button>
+                  )}
+                  {showOp('OPERATION_yunYiCode') && (
+                    <Button icon={<ScanOutlined />} onClick={() => setYunyiOpen(true)}>
+                      云驿扫码
+                    </Button>
+                  )}
+                  {showOp('OPERATION_cardNo1Search') && (
+                    <Button icon={<CreditCardOutlined />} onClick={() => setCardSearchOpen(true)}>
+                      煤样卡查询
+                    </Button>
+                  )}
+                </div>
               </div>
             )}
           </div>
           {renderModuleBody()}
         </section>
 
-        <section className="mer-card mer-list-card">
-          <div className="mer-card-hd">
-            <h2>入厂车辆列表</h2>
-            <span className="mer-list-count">共 {filteredRecords.length} 条 · 按入厂时间倒序</span>
-          </div>
-          <div className="mer-list-body" ref={listBodyRef}>
-            <Table
-              rowKey="id"
-              size="small"
-              columns={columns}
-              dataSource={filteredRecords}
-              pagination={false}
-              scroll={{ x: 1280, y: tableY }}
-            />
-          </div>
-        </section>
+        {isCoalEntry && (
+          <section className="mer-card mer-list-card">
+            <div className="mer-card-hd">
+              <h2>入厂车辆列表</h2>
+              <span className="mer-list-count">共 {filteredRecords.length} 条 · 按入厂时间倒序</span>
+            </div>
+            <div className="mer-list-body" ref={listBodyRef}>
+              <Table
+                rowKey="id"
+                size="small"
+                columns={columns}
+                dataSource={filteredRecords}
+                pagination={false}
+                scroll={{ x: 1280, y: tableY }}
+              />
+            </div>
+          </section>
+        )}
 
         <PlanSelectDrawer open={planOpen} onClose={() => setPlanOpen(false)} onPick={handlePlanPick} />
         <YunyiScanModal open={yunyiOpen} onClose={() => setYunyiOpen(false)} onSuccess={handleYunyiScan} />
@@ -600,11 +599,7 @@ const ManualEntryRegistration: React.FC = () => {
           onClose={() => setPlanScanOpen(false)}
           onSubmit={handlePlanScan}
         />
-        <CardSearchDrawer
-          open={cardSearchOpen}
-          onClose={() => setCardSearchOpen(false)}
-          onApply={handleCardApply}
-        />
+        <CardSearchDrawer open={cardSearchOpen} onClose={() => setCardSearchOpen(false)} />
 
         {submitting && (
           <div className="mer-global-spin">

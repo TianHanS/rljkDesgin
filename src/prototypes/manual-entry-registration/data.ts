@@ -2,7 +2,7 @@
  * 燃煤入厂登记 · 入厂点、模块配置、表单字段/操作权限与 Mock 数据
  */
 
-export type ModuleCode = 'coal-entry' | 'transfer-coal' | 'non-coal' | 'exit';
+export type ModuleCode = 'coal-entry' | 'non-coal' | 'transfer-coal' | 'vehicle-card' | 'exit';
 export type RecordStatus = 'registered' | 'exited';
 
 export interface FieldConfig {
@@ -79,13 +79,22 @@ export const SITES: SiteConfig[] = [
   { id: 'west', name: '西门入厂点', moduleCode: 'MEOR-WEST' },
 ];
 
-/** 模拟当前登录人可见的二级功能菜单 */
+/** 二级功能菜单定义（顺序与业务菜单一致） */
 export const MODULE_MENUS: ModuleMenu[] = [
   { code: 'coal-entry', label: '来煤登记', permitted: true },
+  { code: 'non-coal', label: '非煤物资登记', permitted: true },
   { code: 'transfer-coal', label: '转场煤登记', permitted: true },
-  { code: 'non-coal', label: '非煤物资登记', permitted: false },
+  { code: 'vehicle-card', label: '车辆办卡', permitted: true },
   { code: 'exit', label: '出厂登记', permitted: true },
 ];
+
+export const MODULE_LABELS: Record<ModuleCode, string> = {
+  'coal-entry': '来煤登记',
+  'non-coal': '非煤物资登记',
+  'transfer-coal': '转场煤登记',
+  'vehicle-card': '车辆办卡',
+  exit: '出厂登记',
+};
 
 export const TRANSPORTERS = ['蒙东物流', '鄂尔多斯汽运', '湘赣联运', '桂海运输', '神华物流'];
 export const SAMPLE_METHODS = ['机械采样', '人工采样'] as const;

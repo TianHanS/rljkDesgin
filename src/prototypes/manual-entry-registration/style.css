@@ -26,25 +26,186 @@ body,
   font-family: "PingFang SC", "Microsoft YaHei", "Segoe UI", system-ui, sans-serif;
 }
 
-.mer-toolbar {
+.mer-context-bar {
   flex: 0 0 auto;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 4px 4px 0;
+  gap: 16px;
+  padding: 8px 12px;
+  background: #fff;
+  border: 1px solid #f0f0f0;
+  border-radius: 8px;
 }
 
-.mer-module-tabs {
-  margin-bottom: 0 !important;
+.mer-context-site {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  padding-right: 16px;
+  border-right: 1px solid rgba(0, 0, 0, 0.06);
 }
 
-.mer-module-tabs .ant-tabs-nav {
-  margin-bottom: 0 !important;
+.mer-site-dropdown {
+  width: 148px !important;
+}
+
+.mer-module-nav {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  overflow-x: auto;
+}
+
+.mer-module-nav-item {
+  appearance: none;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  font-size: 13px;
+  color: rgba(0, 0, 0, 0.65);
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.mer-module-nav-item:hover {
+  background: rgba(22, 119, 255, 0.06);
+  color: #1677ff;
+}
+
+.mer-module-nav-item.is-active {
+  background: rgba(22, 119, 255, 0.1);
+  border-color: rgba(22, 119, 255, 0.25);
+  color: #1677ff;
+  font-weight: 600;
+}
+
+.mer-module-nav-icon {
+  display: inline-flex;
+  font-size: 14px;
+  opacity: 0.85;
+}
+
+.mer-module-nav-item.is-active .mer-module-nav-icon {
+  opacity: 1;
 }
 
 .mer-auto-tag {
   flex-shrink: 0;
+  margin-left: auto;
+}
+
+.mer-card-title {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  min-width: 0;
+}
+
+.mer-card-title h2 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.mer-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.mer-action-group-label {
+  font-size: 12px;
+  color: rgba(0, 0, 0, 0.35);
+  white-space: nowrap;
+}
+
+.mer-action-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding-left: 10px;
+  border-left: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.mer-module-placeholder {
+  padding: 48px 24px;
+  min-height: 160px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mer-card-read-footer {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.mer-card-read-idle {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 28px 0 20px;
+  text-align: center;
+}
+
+.mer-card-read-idle-icon {
+  font-size: 40px;
+  color: rgba(22, 119, 255, 0.35);
+}
+
+.mer-card-read-status {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: rgba(0, 0, 0, 0.88);
+}
+
+.mer-card-read-ring {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: rgba(22, 119, 255, 0.06);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mer-card-read-success-hd {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #52c41a;
+}
+
+.mer-card-read-ok-icon {
+  font-size: 18px;
+}
+
+.mer-card-read-desc {
+  margin-bottom: 4px;
+}
+
+.mer-card-read-btn {
+  margin-top: 16px;
 }
 
 .mer-field-input,
@@ -59,12 +220,6 @@ body,
   border-bottom: 1px solid #d9d9d9 !important;
   border-radius: 0 !important;
   box-shadow: none !important;
-}
-
-.mer-module-placeholder {
-  padding: 24px 16px;
-  color: rgba(0, 0, 0, 0.45);
-  font-size: 13px;
 }
 
 .mer-card-read-hint {
@@ -254,13 +409,6 @@ body,
 .mer-list-count {
   font-size: 12px;
   color: rgba(0, 0, 0, 0.45);
-}
-
-.mer-card-actions {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-wrap: nowrap;
 }
 
 .mer-card-bd {

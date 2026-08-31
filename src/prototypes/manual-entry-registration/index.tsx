@@ -370,9 +370,8 @@ const ManualEntryRegistration: React.FC = () => {
   const renderCoalEntryForm = () => (
     <>
       <div className="mer-card-bd">
-        <div className="mer-form-grid">
-          <div>
-            <p className="mer-col-title">来煤信息</p>
+        {(showField('FIELD_vehicleNo') || showField('FIELD_cardNo')) && (
+          <div className="mer-form-identity-row">
             {showField('FIELD_vehicleNo') && (
               <PlateInput
                 value={values.plate}
@@ -383,6 +382,11 @@ const ManualEntryRegistration: React.FC = () => {
             {showField('FIELD_cardNo') && (
               <FormFieldRow label="车辆卡号" value={values.vehicleCard} />
             )}
+          </div>
+        )}
+        <div className="mer-form-grid">
+          <div>
+            <p className="mer-col-title">来煤信息</p>
             <FormFieldRow label="供应商" value={values.supplier} />
             <FormFieldRow label="矿点" value={values.mine} />
             <FormFieldRow label="煤种" value={values.coalType} />

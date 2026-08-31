@@ -1,0 +1,101 @@
+@import "tailwindcss";
+
+html,
+body,
+#root {
+  height: 100% !important;
+  max-height: 100% !important;
+  margin: 0 !important;
+  overflow: hidden !important;
+}
+
+.apm-root {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 1100px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 16px 14px;
+  background: #f5f5f5;
+  color: rgba(0, 0, 0, 0.88);
+  font-family: "PingFang SC", "Microsoft YaHei", "Segoe UI", system-ui, sans-serif;
+}
+
+.apm-hd {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.apm-hd h1 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 650;
+}
+
+.apm-card {
+  flex: 1 1 auto;
+  min-height: 0;
+  background: #fff;
+  border: 1px solid #f0f0f0;
+  border-radius: 8px;
+  padding: 8px;
+  overflow: hidden;
+}
+
+.apm-drawer-sub {
+  margin-left: 8px;
+  font-size: 13px;
+  font-weight: 400;
+  color: rgba(0, 0, 0, 0.45);
+}
+
+.apm-hint {
+  margin: 0 0 10px;
+  font-size: 12px;
+  color: rgba(0, 0, 0, 0.45);
+}
+
+.apm-drag-handle {
+  cursor: grab;
+  color: rgba(0, 0, 0, 0.35);
+  font-size: 14px;
+}
+
+.apm-drag-handle:active {
+  cursor: grabbing;
+}
+
+.apm-row-dragging {
+  background: rgba(22, 119, 255, 0.06) !important;
+  opacity: 0.75;
+}
+
+.apm-row-disabled td {
+  color: rgba(0, 0, 0, 0.35);
+}
+
+.apm-param-section {
+  margin-bottom: 20px;
+}
+
+.apm-section-hd {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .apm-root * {
+    transition: none !important;
+    animation: none !important;
+  }
+}

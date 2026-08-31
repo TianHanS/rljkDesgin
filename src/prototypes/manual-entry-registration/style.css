@@ -415,6 +415,15 @@ body,
   padding: 6px 12px 2px;
 }
 
+.mer-form-identity-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 24px 48px;
+  padding-bottom: 8px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
 .mer-form-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

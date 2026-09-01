@@ -15,15 +15,23 @@ export interface BizModule {
   moduleTypeId: string;
 }
 
+export interface SpecParamOption {
+  label: string;
+  value: string | number | boolean;
+}
+
 export interface SpecParam {
   id: string;
   code: string;
   name: string;
-  dataType: 'string' | 'number' | 'boolean' | 'select';
+  dataType: 'string' | 'number' | 'boolean' | 'select' | 'radio';
   required: boolean;
   constraint: string;
   description: string;
-  options?: string[];
+  /** 分组标题（详细参数分区展示） */
+  group?: string;
+  options?: Array<string | SpecParamOption>;
+  defaultValue?: string | number | boolean | null;
 }
 
 export interface SpecMessage {
@@ -34,6 +42,9 @@ export interface SpecMessage {
   ledTemplate: string;
   voiceEnabled: boolean;
   voiceTemplate: string;
+  /** LED/语音快捷输入文案 */
+  ledQuickOptions?: string[];
+  voiceQuickOptions?: string[];
 }
 
 export interface SpecActivity {
@@ -117,6 +128,31 @@ export const PLACEHOLDERS = [
   { key: '平台消息', token: '{平台消息}' },
 ] as const;
 
+/** 消息快捷整句输入 */
+export const MSG_QUICK_LED = [
+  '禁用',
+  '{车牌号} 登记成功',
+  '近10辆成功登记车辆',
+  '当前登记车辆信息',
+  '{车牌号} 计量完成\n净重 {重量} 吨',
+  '2号磅已关闭',
+];
+
+export const MSG_QUICK_VOICE = [
+  '禁用',
+  '车辆登记成功',
+  '{车牌号}请入厂',
+  '{车牌号}计量完成，请下磅',
+  '采样完成请前往过衡',
+];
+
+export const normalizeOptions = (
+  options?: Array<string | SpecParamOption>,
+): SpecParamOption[] => {
+  if (!options?.length) return [];
+  return options.map((o) => (typeof o === 'string' ? { label: o, value: o } : o));
+};
+
 const entryActivities: SpecActivity[] = [
   {
     id: 'act-scan',
@@ -161,6 +197,8 @@ const entryActivities: SpecActivity[] = [
         ledTemplate: '{车牌号} 扫码成功',
         voiceEnabled: true,
         voiceTemplate: '{车牌号}请入厂',
+        ledQuickOptions: ['{车牌号} 扫码成功', '近10辆成功登记车辆', '当前登记车辆信息'],
+        voiceQuickOptions: ['{车牌号}请入厂', '车辆登记成功'],
       },
     ],
   },
@@ -198,6 +236,8 @@ const entryActivities: SpecActivity[] = [
         ledTemplate: '{车牌号} 登记成功\n请前往{采样位}',
         voiceEnabled: false,
         voiceTemplate: '',
+        ledQuickOptions: ['{车牌号} 登记成功', '{车牌号} 登记成功\n请前往{采样位}', '近10辆成功登记车辆'],
+        voiceQuickOptions: ['车辆登记成功', '{车牌号}请入厂'],
       },
     ],
   },
@@ -291,29 +331,12 @@ const sampleActivities: SpecActivity[] = [
   },
 ];
 
+import { WEIGH_ACTIVITIES, weighDefaultValues } from './weighSpec';
+
 export const SPEC_BY_TYPE: Record<string, SpecActivity[]> = {
   'mt-entry': entryActivities,
   'mt-sample': sampleActivities,
-  'mt-weigh': [
-    {
-      id: 'act-weigh',
-      code: 'WEIGH_EXEC',
-      name: '过衡称重',
-      remark: '采集毛重/皮重并打印过磅单',
-      params: [
-        {
-          id: 'wp1',
-          code: 'OPERATION_printTicket',
-          name: '打印过磅单',
-          dataType: 'boolean',
-          required: false,
-          constraint: '布尔',
-          description: '过衡完成后是否自动打印',
-        },
-      ],
-      messages: [],
-    },
-  ],
+  'mt-weigh': WEIGH_ACTIVITIES,
   'mt-unload': [
     {
       id: 'act-unload',
@@ -330,6 +353,7 @@ export const SPEC_BY_TYPE: Record<string, SpecActivity[]> = {
           constraint: '下拉单选',
           description: '车辆默认卸煤区域',
           options: ['#1 圆形煤场', '#2 圆形煤场', '厂外中转煤场'],
+          group: '卸煤调度',
         },
       ],
       messages: [],
@@ -351,6 +375,8 @@ export const SPEC_BY_TYPE: Record<string, SpecActivity[]> = {
           ledTemplate: '{车牌号} 请出厂',
           voiceEnabled: true,
           voiceTemplate: '{车牌号}请出厂',
+          ledQuickOptions: ['{车牌号} 请出厂', '当前登记车辆信息'],
+          voiceQuickOptions: ['{车牌号}请出厂', '车辆登记成功'],
         },
       ],
     },
@@ -361,6 +387,18 @@ export const findModule = (id: string) => BIZ_MODULES.find((m) => m.id === id);
 export const findModuleType = (id: string) => MODULE_TYPES.find((t) => t.id === id);
 export const findActivity = (typeId: string, activityId: string) =>
   (SPEC_BY_TYPE[typeId] || []).find((a) => a.id === activityId);
+
+/** 流程配置未完成：无环节 / 参数待检查 / 有环节但未落详细参数 */
+export const isFlowConfigIncomplete = (cfg: ModuleAutoConfig) => {
+  if (!cfg.steps.length) return true;
+  if (cfg.paramsDirty) return true;
+  if (cfg.details.some((d) => d.needsReview)) return true;
+  if (!cfg.details.length) return true;
+  return false;
+};
+
+/** 服务配置未完成：未上传流程包 */
+export const isServiceConfigIncomplete = (cfg: ModuleAutoConfig) => !cfg.packageVersion;
 
 export const formatStamp = (d = new Date()) => {
   const p = (n: number) => String(n).padStart(2, '0');
@@ -460,5 +498,40 @@ export const INITIAL_CONFIGS: ModuleAutoConfig[] = [
     packageVersion: 'v1.0.3',
     packageUploadedAt: '2026-08-20 08:30:00',
     servicePort: 9201,
+  },
+  {
+    id: 'cfg-3',
+    moduleId: 'mod-weigh1',
+    createdAt: '2026-08-31 09:00:00',
+    updatedAt: '2026-08-31 15:20:00',
+    steps: [{ instanceId: 's6', activityId: 'act-weigh-main' }],
+    details: [
+      {
+        activityId: 'act-weigh-main',
+        paramValues: weighDefaultValues(),
+        messages: [
+          {
+            messageId: 'wm-led',
+            ledEnabled: true,
+            ledTemplate: '{车牌号} 计量完成\n净重 {重量} 吨',
+            voiceEnabled: false,
+            voiceTemplate: '',
+          },
+          {
+            messageId: 'wm-voice',
+            ledEnabled: false,
+            ledTemplate: '',
+            voiceEnabled: true,
+            voiceTemplate: '{车牌号}计量完成，请下磅',
+          },
+        ],
+        needsReview: false,
+      },
+    ],
+    paramsDirty: false,
+    serviceStatus: 'running',
+    packageVersion: 'v2.1.0',
+    packageUploadedAt: '2026-08-28 18:00:00',
+    servicePort: 9301,
   },
 ];

@@ -57,7 +57,7 @@
 |------|--------|------|
 | 人工选择计划 | OPERATION_manualSelectPlan | 右侧抽屉；当日来煤计划单选；可按供应商/矿点/煤种筛选；点击行选中；回填供应商、矿点、煤种、品名、运输单位、发站、发站时间、采样位、过衡位、预卸煤区 |
 | 云驿扫码 | OPERATION_yunYiCode | 扫码弹窗；Esc/关闭退出；校验 15 分钟时效；按计划 ID 查计划；回填表单；提交含运单号 |
-| 云驿自动模式 | OPERATION_yunYiCodeAuto | 西门入厂点启用 Tag 提示「待定」 |
+| 云驿自动模式 | OPERATION_yunYiCodeAuto | 二次确认后打开右侧抽屉持续读码；登记类型由 `GOABLE_AotoYunYiRegister`（enter/preEnter）决定；校验时效与计划后自动登记；运单结果保留不重置，动画回到等待下一车 |
 | 计划码扫码 | OPERATION_planCode | 扫码弹窗；按计划 ID 查计划并回填 |
 | 煤样卡查询 | OPERATION_cardNo1Search | 右侧抽屉读卡；5s 未读卡提示；**仅展示查询结果，不回填表单**；用户查看后关闭；可重新读卡 |
 | 确认登记 | OPERATION_enterComfire | 校验必填 → 提交 → 成功清空表单并刷新列表 |
@@ -92,7 +92,7 @@
 ## 🧭 布局与结构
 
 - **布局模式**：一屏固定（根容器 `height: 100%` + `overflow: hidden`）。
-- **顶部上下文栏**：白底卡片，左侧入厂点下拉，中间 Segment 式功能导航（带图标），右侧云驿自动模式 Tag。
+- **顶部上下文栏**：白底卡片，左侧入厂点下拉，中间 Segment 式功能导航；来煤登记且有权限时右侧「云驿自动模式」按钮（二次确认后开抽屉）。
 - **表单卡片**：来煤登记时，车牌号码与车辆卡号单独一行置于「来煤信息/矿发信息/入厂信息」标题上方；下方三列字段 + 底部登记按钮。
 - **入厂车辆列表卡片**：仅来煤登记时展示。
 
@@ -129,7 +129,8 @@ src/prototypes/manual-entry-registration/
     ├── PlanSelectDrawer.tsx
     ├── PlanScanModal.tsx
     ├── PlateInput.tsx
-    └── YunyiScanModal.tsx
+    ├── YunyiScanModal.tsx
+    └── YunyiAutoDrawer.tsx
 ```
 
 ## ✅ 验收记录

@@ -10,8 +10,8 @@ import {
   Form,
   Input,
   InputNumber,
+  Radio,
   Select,
-  Switch,
   Tabs,
   Tag,
   message,
@@ -28,6 +28,7 @@ import {
   findActivity,
   findModule,
   findModuleType,
+  normalizeOptions,
   uid,
   type ActivityDetailConfig,
   type FlowStep,
@@ -128,7 +129,13 @@ const FlowConfigDrawer: React.FC<Props> = ({ open, config, onClose, onSave }) =>
         paramValues: Object.fromEntries(
           (spec?.params || []).map((p) => [
             p.id,
-            p.dataType === 'boolean' ? false : p.dataType === 'number' ? null : p.options?.[0] ?? '',
+            p.defaultValue !== undefined
+              ? p.defaultValue
+              : p.dataType === 'boolean'
+                ? false
+                : p.dataType === 'number'
+                  ? null
+                  : normalizeOptions(p.options)[0]?.value ?? '',
           ]),
         ),
         messages: (spec?.messages || []).map((m) => ({
@@ -206,19 +213,41 @@ const FlowConfigDrawer: React.FC<Props> = ({ open, config, onClose, onSave }) =>
   };
 
   const renderParamControl = (activityId: string, p: SpecParam, value: unknown) => {
+    const opts = normalizeOptions(p.options);
+    if (p.dataType === 'radio' || (p.dataType === 'boolean' && opts.length)) {
+      const radioOpts =
+        p.dataType === 'boolean' && !opts.length
+          ? [
+              { label: '启用', value: true },
+              { label: '禁用', value: false },
+            ]
+          : opts;
+      return (
+        <Radio.Group
+          size="small"
+          value={value as string | number | boolean}
+          options={radioOpts.map((o) => ({ label: o.label, value: o.value }))}
+          onChange={(e) => patchParam(activityId, p.id, e.target.value)}
+        />
+      );
+    }
     if (p.dataType === 'boolean') {
       return (
-        <Switch
-          checked={!!value}
-          checkedChildren="开"
-          unCheckedChildren="关"
-          onChange={(v) => patchParam(activityId, p.id, v)}
+        <Radio.Group
+          size="small"
+          value={!!value}
+          options={[
+            { label: '启用', value: true },
+            { label: '禁用', value: false },
+          ]}
+          onChange={(e) => patchParam(activityId, p.id, e.target.value)}
         />
       );
     }
     if (p.dataType === 'number') {
       return (
         <InputNumber
+          size="small"
           style={{ width: '100%' }}
           value={typeof value === 'number' ? value : null}
           onChange={(v) => patchParam(activityId, p.id, v == null ? null : Number(v))}
@@ -228,9 +257,10 @@ const FlowConfigDrawer: React.FC<Props> = ({ open, config, onClose, onSave }) =>
     if (p.dataType === 'select') {
       return (
         <Select
+          size="small"
           style={{ width: '100%' }}
-          value={(value as string) || undefined}
-          options={(p.options || []).map((o) => ({ value: o, label: o }))}
+          value={value as string | number | undefined}
+          options={opts.map((o) => ({ value: o.value, label: o.label }))}
           onChange={(v) => patchParam(activityId, p.id, v)}
         />
       );
@@ -244,6 +274,41 @@ const FlowConfigDrawer: React.FC<Props> = ({ open, config, onClose, onSave }) =>
     );
   };
 
+  const renderParamGroups = (activityId: string, spec: SpecActivity, detail: ActivityDetailConfig) => {
+    const groups: { title: string; params: SpecParam[] }[] = [];
+    const map = new Map<string, SpecParam[]>();
+    for (const param of spec.params) {
+      const g = param.group || '参数配置';
+      if (!map.has(g)) map.set(g, []);
+      map.get(g)!.push(param);
+    }
+    map.forEach((params, title) => groups.push({ title, params }));
+
+    return groups.map((g) => (
+      <div key={g.title} className="apc-param-group">
+        <div className="apc-group-hd">
+          <span className="apc-group-dot" />
+          <h4>{g.title}</h4>
+        </div>
+        <div className="apc-param-grid">
+          {g.params.map((param) => (
+            <div key={param.id} className="apc-param-card">
+              <div className="apc-param-name">
+                {param.required && <span className="apc-req">*</span>}
+                {param.name}
+                <code>{param.code}</code>
+              </div>
+              <p className="apc-param-desc">{param.description}</p>
+              <div className="apc-param-ctrl">
+                {renderParamControl(activityId, param, detail.paramValues[param.id])}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    ));
+  };
+
   if (!config) return null;
 
   const stepsTab = (
@@ -254,20 +319,22 @@ const FlowConfigDrawer: React.FC<Props> = ({ open, config, onClose, onSave }) =>
           <Tag>{type?.name}</Tag>
         </div>
         <p className="apc-hint">点击「添加」将环节加入右侧流水线；同一活动可重复添加。</p>
-        <div className="apc-catalog">
-          {catalog.map((act) => (
-            <div key={act.id} className="apc-catalog-item">
-              <div className="apc-catalog-main">
-                <strong>{act.name}</strong>
-                <span className="apc-muted">{act.code}</span>
-                <p>{act.remark || '—'}</p>
+        <div className="apc-flow-scroll">
+          <div className="apc-catalog">
+            {catalog.map((act) => (
+              <div key={act.id} className="apc-catalog-item">
+                <div className="apc-catalog-main">
+                  <strong>{act.name}</strong>
+                  <span className="apc-muted">{act.code}</span>
+                  <p>{act.remark || '—'}</p>
+                </div>
+                <Button size="small" icon={<PlusOutlined />} onClick={() => addStep(act)}>
+                  添加
+                </Button>
               </div>
-              <Button size="small" icon={<PlusOutlined />} onClick={() => addStep(act)}>
-                添加
-              </Button>
-            </div>
-          ))}
-          {!catalog.length && <Empty description="该类型暂无规格活动" />}
+            ))}
+            {!catalog.length && <Empty description="该类型暂无规格活动" />}
+          </div>
         </div>
       </div>
 
@@ -276,41 +343,43 @@ const FlowConfigDrawer: React.FC<Props> = ({ open, config, onClose, onSave }) =>
           <span>已选流程环节</span>
           <span className="apc-muted">共 {steps.length} 步 · 可拖拽排序</span>
         </div>
-        {!steps.length ? (
-          <Empty description="请从左侧添加环节" style={{ marginTop: 48 }} />
-        ) : (
-          <ul className="apc-step-list">
-            {steps.map((step, idx) => {
-              const act = findActivity(typeId, step.activityId);
-              return (
-                <li
-                  key={step.instanceId}
-                  className={`apc-step-item${dragId === step.instanceId ? ' is-dragging' : ''}`}
-                  onDragOver={(e) => onDragOver(e, step.instanceId)}
-                >
-                  <HolderOutlined
-                    className="apc-drag-handle"
-                    draggable
-                    onDragStart={() => onDragStart(step.instanceId)}
-                    onDragEnd={onDragEnd}
-                  />
-                  <span className="apc-step-idx">{idx + 1}</span>
-                  <div className="apc-step-body">
-                    <strong>{act?.name ?? step.activityId}</strong>
-                    <span className="apc-muted">{act?.remark}</span>
-                  </div>
-                  <Button
-                    type="text"
-                    danger
-                    size="small"
-                    icon={<DeleteOutlined />}
-                    onClick={() => removeStep(step.instanceId)}
-                  />
-                </li>
-              );
-            })}
-          </ul>
-        )}
+        <div className="apc-flow-scroll">
+          {!steps.length ? (
+            <Empty description="请从左侧添加环节" style={{ marginTop: 48 }} />
+          ) : (
+            <ul className="apc-step-list">
+              {steps.map((step, idx) => {
+                const act = findActivity(typeId, step.activityId);
+                return (
+                  <li
+                    key={step.instanceId}
+                    className={`apc-step-item${dragId === step.instanceId ? ' is-dragging' : ''}`}
+                    onDragOver={(e) => onDragOver(e, step.instanceId)}
+                  >
+                    <HolderOutlined
+                      className="apc-drag-handle"
+                      draggable
+                      onDragStart={() => onDragStart(step.instanceId)}
+                      onDragEnd={onDragEnd}
+                    />
+                    <span className="apc-step-idx">{idx + 1}</span>
+                    <div className="apc-step-body">
+                      <strong>{act?.name ?? step.activityId}</strong>
+                      <span className="apc-muted">{act?.remark}</span>
+                    </div>
+                    <Button
+                      type="text"
+                      danger
+                      size="small"
+                      icon={<DeleteOutlined />}
+                      onClick={() => removeStep(step.instanceId)}
+                    />
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
         <div className="apc-pane-ft">
           <Button type="primary" onClick={saveSteps}>
             保存环节配置
@@ -357,71 +426,74 @@ const FlowConfigDrawer: React.FC<Props> = ({ open, config, onClose, onSave }) =>
               <p className="apc-act-desc">{spec.remark}</p>
 
               {!!spec.params.length && (
-                <div className="apc-sub">
-                  <h4>关联参数</h4>
-                  {spec.params.map((p) => (
-                    <div key={p.id} className="apc-param-row">
-                      <div className="apc-param-meta">
-                        <div className="apc-param-name">
-                          {p.required && <span className="apc-req">*</span>}
-                          {p.name}
-                          <code>{p.code}</code>
-                        </div>
-                        <p className="apc-param-desc">{p.description}</p>
-                        <p className="apc-param-rule">约束：{p.constraint}</p>
-                      </div>
-                      <div className="apc-param-ctrl">
-                        {renderParamControl(activityId, p, detail.paramValues[p.id])}
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                <div className="apc-sub">{renderParamGroups(activityId, spec, detail)}</div>
               )}
 
               {!!spec.messages.length && (
                 <div className="apc-sub">
-                  <h4>消息通知</h4>
+                  <div className="apc-group-hd">
+                    <span className="apc-group-dot" />
+                    <h4>消息通知</h4>
+                  </div>
                   <p className="apc-hint">
-                    配置本流程触发时的语音与 LED 显示；可用顶部按钮在光标处插入占位符。
+                    配置本流程触发时的语音与 LED 显示；可用占位符与快捷输入组合内容。
                   </p>
-                  {spec.messages.map((m) => {
-                    const mv = detail.messages.find((x) => x.messageId === m.id);
-                    if (!mv) return null;
-                    return (
-                      <div key={m.id} className="apc-msg-card">
-                        <div className="apc-msg-card-hd">
-                          <strong>{m.name}</strong>
-                          <code>{m.code}</code>
+                  <div className="apc-msg-grid">
+                    {spec.messages.map((m) => {
+                      const mv = detail.messages.find((x) => x.messageId === m.id);
+                      if (!mv) return null;
+                      return (
+                        <div key={m.id} className="apc-msg-card">
+                          <div className="apc-msg-card-hd">
+                            <strong>{m.name}</strong>
+                            <code>{m.code}</code>
+                          </div>
+                          <Form layout="vertical" size="small">
+                            <Form.Item label="LED 是否启用">
+                              <Radio.Group
+                                value={mv.ledEnabled}
+                                options={[
+                                  { label: '启用', value: true },
+                                  { label: '禁用', value: false },
+                                ]}
+                                onChange={(e) =>
+                                  patchMessage(activityId, m.id, { ledEnabled: e.target.value })
+                                }
+                              />
+                            </Form.Item>
+                            <MessageTemplateField
+                              label="LED 默认模板"
+                              kind="led"
+                              value={mv.ledTemplate}
+                              disabled={!mv.ledEnabled}
+                              quickOptions={m.ledQuickOptions}
+                              onChange={(v) => patchMessage(activityId, m.id, { ledTemplate: v })}
+                            />
+                            <Form.Item label="语音是否启用" style={{ marginTop: 8 }}>
+                              <Radio.Group
+                                value={mv.voiceEnabled}
+                                options={[
+                                  { label: '启用', value: true },
+                                  { label: '禁用', value: false },
+                                ]}
+                                onChange={(e) =>
+                                  patchMessage(activityId, m.id, { voiceEnabled: e.target.value })
+                                }
+                              />
+                            </Form.Item>
+                            <MessageTemplateField
+                              label="语音默认模板"
+                              kind="voice"
+                              value={mv.voiceTemplate}
+                              disabled={!mv.voiceEnabled}
+                              quickOptions={m.voiceQuickOptions}
+                              onChange={(v) => patchMessage(activityId, m.id, { voiceTemplate: v })}
+                            />
+                          </Form>
                         </div>
-                        <Form layout="vertical" size="small">
-                          <Form.Item label="LED 是否启用">
-                            <Switch
-                              checked={mv.ledEnabled}
-                              onChange={(v) => patchMessage(activityId, m.id, { ledEnabled: v })}
-                            />
-                          </Form.Item>
-                          <MessageTemplateField
-                            label="LED 默认模板"
-                            value={mv.ledTemplate}
-                            disabled={!mv.ledEnabled}
-                            onChange={(v) => patchMessage(activityId, m.id, { ledTemplate: v })}
-                          />
-                          <Form.Item label="语音是否启用" style={{ marginTop: 12 }}>
-                            <Switch
-                              checked={mv.voiceEnabled}
-                              onChange={(v) => patchMessage(activityId, m.id, { voiceEnabled: v })}
-                            />
-                          </Form.Item>
-                          <MessageTemplateField
-                            label="语音默认模板"
-                            value={mv.voiceTemplate}
-                            disabled={!mv.voiceEnabled}
-                            onChange={(v) => patchMessage(activityId, m.id, { voiceTemplate: v })}
-                          />
-                        </Form>
-                      </div>
-                    );
-                  })}
+                      );
+                    })}
+                  </div>
                 </div>
               )}
 
@@ -455,11 +527,22 @@ const FlowConfigDrawer: React.FC<Props> = ({ open, config, onClose, onSave }) =>
       }
       open={open}
       onClose={onClose}
-      width={1080}
+      width={1180}
       destroyOnHidden
-      styles={{ body: { paddingTop: 8 } }}
+      className="apc-flow-drawer"
+      styles={{
+        body: {
+          paddingTop: 8,
+          paddingBottom: 12,
+          display: 'flex',
+          flexDirection: 'column',
+          height: 'calc(100% - 55px)',
+          overflow: 'hidden',
+        },
+      }}
     >
       <Tabs
+        className="apc-flow-tabs"
         activeKey={tab}
         onChange={setTab}
         items={[

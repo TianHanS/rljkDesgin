@@ -13,6 +13,7 @@ import {
   Button,
   ConfigProvider,
   Empty,
+  Popconfirm,
   Select,
   Space,
   Spin,
@@ -26,6 +27,7 @@ import {
   PlusSquareOutlined,
   QrcodeOutlined,
   ScanOutlined,
+  ThunderboltOutlined,
 } from '@ant-design/icons';
 import zhCN from 'antd/locale/zh_CN';
 import dayjs, { type Dayjs } from 'dayjs';
@@ -38,6 +40,7 @@ import PlanSelectDrawer from './components/PlanSelectDrawer';
 import PlanScanModal from './components/PlanScanModal';
 import PlateInput from './components/PlateInput';
 import YunyiScanModal from './components/YunyiScanModal';
+import YunyiAutoDrawer from './components/YunyiAutoDrawer';
 import {
   INITIAL_RECORDS,
   MODULE_LABELS,
@@ -62,7 +65,7 @@ import {
   type ModuleCode,
   type OperationKey,
 } from './data';
-import { applyPlan, isYunyiFresh, parseYunyi } from './parse';
+import { applyPlan, isYunyiFresh, parseYunyi, type YunyiPayload } from './parse';
 
 interface FormValues {
   plate?: string;
@@ -122,6 +125,7 @@ const ManualEntryRegistration: React.FC = () => {
   const [submitting, setSubmitting] = useState(false);
   const [planOpen, setPlanOpen] = useState(false);
   const [yunyiOpen, setYunyiOpen] = useState(false);
+  const [yunyiAutoOpen, setYunyiAutoOpen] = useState(false);
   const [planScanOpen, setPlanScanOpen] = useState(false);
   const [cardSearchOpen, setCardSearchOpen] = useState(false);
   const [writingCardId, setWritingCardId] = useState<string | null>(null);
@@ -215,6 +219,56 @@ const ManualEntryRegistration: React.FC = () => {
       weighPos: prev.weighPos || plan.weighPos,
     }));
     message.success('扫码成功');
+  };
+
+  /** 云驿自动模式：登记成功写入列表；表单回显运单但不清空，便于核对 */
+  const handleYunyiAutoRegistered = (payload: {
+    mode: 'enter' | 'preEnter';
+    plan: CoalPlan;
+    parsed: YunyiPayload;
+    success: boolean;
+    failReason?: string;
+  }) => {
+    const { mode, plan, parsed, success } = payload;
+    const base = applyPlan(plan);
+    setValues({
+      ...emptyForm(),
+      ...base,
+      plate: parsed.plate || plan.plate,
+      shipTime: parsed.stationTime ? dayjs(parsed.stationTime) : dayjs(plan.shipTime),
+      gross: parsed.gross ?? plan.gross,
+      tare: parsed.tare ?? plan.tare,
+      net: parsed.net ?? plan.net,
+      taskNo: parsed.taskNo || plan.taskNo,
+      sampleMethod: '机械采样',
+      samplePos: plan.samplePos || SAMPLE_POSITIONS[0],
+      weighPos: plan.weighPos || WEIGH_POSITIONS[0],
+    });
+
+    if (!success) return;
+
+    const now = dayjs().format('YYYY-MM-DD HH:mm:ss');
+    const row: EntryRecord = {
+      id: `R${Date.now()}`,
+      serialNo: nextSerial(records),
+      plate: parsed.plate || plan.plate,
+      supplier: plan.supplier,
+      mine: plan.mine,
+      coalType: plan.coalType,
+      sampleMethod: '机械采样',
+      net: Number(parsed.net ?? plan.net),
+      weighPos: plan.weighPos || '—',
+      samplePos: plan.samplePos || '—',
+      enterAt: now,
+      status: 'registered',
+      entryCard: '',
+      siteId: site.id,
+      taskNo: parsed.taskNo || plan.taskNo,
+    };
+    setRecords((list) => [row, ...list]);
+    if (mode === 'preEnter') {
+      // 预登记同样记入列表，便于原型演示
+    }
   };
 
   const validateForm = (): boolean => {
@@ -531,10 +585,32 @@ const ManualEntryRegistration: React.FC = () => {
               setValues(emptyForm());
             }}
           />
-          {showOp('OPERATION_yunYiCodeAuto') && (
-            <Tag color="gold" className="mer-auto-tag">
-              云驿自动模式（待定）
-            </Tag>
+          {isCoalEntry && showOp('OPERATION_yunYiCodeAuto') && (
+            <Popconfirm
+              title="确认启用读码自动登记模式？"
+              description={
+                <div className="mer-auto-confirm-desc">
+                  请保持页面置顶，收起浏览器、操作键盘或可通过鼠标点击退出扫码自动登记识别模式
+                  <div className="mer-auto-confirm-mode">
+                    当前配置：
+                    {site.GOABLE_AotoYunYiRegister === 'preEnter' ? '预入厂登记' : '入厂登记'}
+                    （GOABLE_AotoYunYiRegister）
+                  </div>
+                </div>
+              }
+              okText="确认启用"
+              cancelText="取消"
+              onConfirm={() => setYunyiAutoOpen(true)}
+            >
+              <Button
+                type="primary"
+                ghost
+                icon={<ThunderboltOutlined />}
+                className="mer-auto-tag"
+              >
+                云驿自动模式
+              </Button>
+            </Popconfirm>
           )}
         </header>
 
@@ -598,6 +674,12 @@ const ManualEntryRegistration: React.FC = () => {
 
         <PlanSelectDrawer open={planOpen} onClose={() => setPlanOpen(false)} onPick={handlePlanPick} />
         <YunyiScanModal open={yunyiOpen} onClose={() => setYunyiOpen(false)} onSuccess={handleYunyiScan} />
+        <YunyiAutoDrawer
+          open={yunyiAutoOpen}
+          site={site}
+          onClose={() => setYunyiAutoOpen(false)}
+          onRegistered={handleYunyiAutoRegistered}
+        />
         <PlanScanModal
           open={planScanOpen}
           onClose={() => setPlanScanOpen(false)}

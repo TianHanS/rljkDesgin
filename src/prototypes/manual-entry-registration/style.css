@@ -105,6 +105,54 @@ body,
   margin-left: auto;
 }
 
+.mer-auto-confirm-desc {
+  max-width: 320px;
+  line-height: 1.6;
+  font-size: 13px;
+}
+
+.mer-auto-confirm-mode {
+  margin-top: 8px;
+  color: rgba(0, 0, 0, 0.45);
+  font-size: 12px;
+}
+
+.mer-yunyi-auto {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.mer-yunyi-auto-status {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 0;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.mer-yunyi-waybill-hd {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.mer-yunyi-waybill-tip {
+  margin: 10px 0 0;
+  font-size: 12px;
+  color: rgba(0, 0, 0, 0.45);
+}
+
+.mer-yunyi-fail {
+  color: #ff4d4f;
+}
+
 .mer-card-title {
   display: flex;
   align-items: center;

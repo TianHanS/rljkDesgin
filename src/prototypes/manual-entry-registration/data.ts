@@ -15,6 +15,11 @@ export interface SiteConfig {
   name: string;
   /** 模块编码 MEOR，用于请求字段/操作配置 */
   moduleCode: string;
+  /**
+   * 云驿自动模式登记类型：enter=入厂登记，preEnter=预入厂登记
+   * 对应配置项 GOABLE_AotoYunYiRegister
+   */
+  GOABLE_AotoYunYiRegister: 'enter' | 'preEnter';
 }
 
 export interface CoalPlan {
@@ -73,10 +78,10 @@ export interface ModuleMenu {
 export const SITE_STORAGE_KEY = 'mer_last_site_id';
 
 export const SITES: SiteConfig[] = [
-  { id: 'south', name: '南门入厂点', moduleCode: 'MEOR-SOUTH' },
-  { id: 'north', name: '北门入厂点', moduleCode: 'MEOR-NORTH' },
-  { id: 'east', name: '东门入厂点', moduleCode: 'MEOR-EAST' },
-  { id: 'west', name: '西门入厂点', moduleCode: 'MEOR-WEST' },
+  { id: 'south', name: '南门入厂点', moduleCode: 'MEOR-SOUTH', GOABLE_AotoYunYiRegister: 'enter' },
+  { id: 'north', name: '北门入厂点', moduleCode: 'MEOR-NORTH', GOABLE_AotoYunYiRegister: 'preEnter' },
+  { id: 'east', name: '东门入厂点', moduleCode: 'MEOR-EAST', GOABLE_AotoYunYiRegister: 'enter' },
+  { id: 'west', name: '西门入厂点', moduleCode: 'MEOR-WEST', GOABLE_AotoYunYiRegister: 'preEnter' },
 ];
 
 /** 二级功能菜单定义（顺序与业务菜单一致） */
@@ -145,6 +150,7 @@ export const getModuleOperationConfig = (
   const base: Partial<Record<OperationKey, boolean>> = {
     OPERATION_manualSelectPlan: true,
     OPERATION_yunYiCode: true,
+    OPERATION_yunYiCodeAuto: true,
     OPERATION_planCode: true,
     OPERATION_cardNo1Search: true,
     OPERATION_enterComfire: true,

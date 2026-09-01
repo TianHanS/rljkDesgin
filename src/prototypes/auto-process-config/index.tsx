@@ -10,7 +10,7 @@
  * - 用户确认的自动化流程配置业务规约与占位符截图
  */
 import React, { useMemo, useState } from 'react';
-import { Button, ConfigProvider, Popconfirm, Space, Tag, message } from 'antd';
+import { Button, ConfigProvider, Badge, Popconfirm, Space, Tag, message } from 'antd';
 import {
   DeleteOutlined,
   EditOutlined,
@@ -29,6 +29,8 @@ import {
   findModule,
   findModuleType,
   formatStamp,
+  isFlowConfigIncomplete,
+  isServiceConfigIncomplete,
   uid,
   type ModuleAutoConfig,
 } from './data';
@@ -114,14 +116,26 @@ const AutoProcessConfig: React.FC = () => {
           {sorted.map((cfg) => {
             const mod = findModule(cfg.moduleId);
             const type = mod ? findModuleType(mod.moduleTypeId) : undefined;
+            const flowTodo = isFlowConfigIncomplete(cfg);
+            const serviceTodo = isServiceConfigIncomplete(cfg);
             return (
               <article key={cfg.id} className="apc-card">
                 <div className="apc-card-top">
                   <div className="apc-card-title">
                     <h2>{mod?.name ?? '未知模块'}</h2>
-                    {cfg.paramsDirty && (
+                    {flowTodo && (
+                      <Tag icon={<ExclamationCircleFilled />} color="error">
+                        流程待完善
+                      </Tag>
+                    )}
+                    {!flowTodo && cfg.paramsDirty && (
                       <Tag icon={<ExclamationCircleFilled />} color="warning">
                         待检查参数
+                      </Tag>
+                    )}
+                    {serviceTodo && (
+                      <Tag icon={<ExclamationCircleFilled />} color="error">
+                        服务待完善
                       </Tag>
                     )}
                   </div>
@@ -168,17 +182,21 @@ const AutoProcessConfig: React.FC = () => {
                   >
                     编辑
                   </Button>
-                  <Button
-                    type="primary"
-                    ghost
-                    icon={<ClusterOutlined />}
-                    onClick={() => setFlowCfg(cfg)}
-                  >
-                    流程配置
-                  </Button>
-                  <Button icon={<SettingOutlined />} onClick={() => setSvcCfg(cfg)}>
-                    服务管理
-                  </Button>
+                  <Badge dot={flowTodo} offset={[-2, 2]}>
+                    <Button
+                      type="primary"
+                      ghost
+                      icon={<ClusterOutlined />}
+                      onClick={() => setFlowCfg(cfg)}
+                    >
+                      流程配置
+                    </Button>
+                  </Badge>
+                  <Badge dot={serviceTodo} offset={[-2, 2]}>
+                    <Button icon={<SettingOutlined />} onClick={() => setSvcCfg(cfg)}>
+                      服务管理
+                    </Button>
+                  </Badge>
                   <Popconfirm
                     title="确认删除该模块配置？"
                     description="将清除环节与参数配置，不可恢复"

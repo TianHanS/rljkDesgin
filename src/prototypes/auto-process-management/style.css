@@ -16,35 +16,132 @@ body,
   height: 100%;
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  padding: 12px 16px 14px;
+  gap: 12px;
+  padding: 14px 18px 16px;
   background: #f5f5f5;
   color: rgba(0, 0, 0, 0.88);
   font-family: "PingFang SC", "Microsoft YaHei", "Segoe UI", system-ui, sans-serif;
+  overflow: auto;
 }
 
 .apm-hd {
   flex: 0 0 auto;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
-  gap: 12px;
+  gap: 16px;
 }
 
 .apm-hd h1 {
-  margin: 0;
-  font-size: 16px;
+  margin: 0 0 4px;
+  font-size: 18px;
   font-weight: 650;
 }
 
+.apm-hd p {
+  margin: 0;
+  font-size: 12px;
+  color: rgba(0, 0, 0, 0.45);
+}
+
+.apm-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 14px;
+  padding-bottom: 8px;
+}
+
 .apm-card {
-  flex: 1 1 auto;
-  min-height: 0;
   background: #fff;
   border: 1px solid #f0f0f0;
-  border-radius: 8px;
-  padding: 8px;
+  border-radius: 10px;
+  padding: 14px 14px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.apm-card:hover {
+  border-color: #d6e4ff;
+  box-shadow: 0 6px 18px rgba(22, 119, 255, 0.08);
+}
+
+.apm-card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.apm-card-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.apm-card-title h2 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 650;
+}
+
+.apm-card-meta {
+  margin: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 12px;
+}
+
+.apm-card-meta dt {
+  font-size: 12px;
+  color: rgba(0, 0, 0, 0.45);
+}
+
+.apm-card-meta dd {
+  margin: 2px 0 0;
+  font-size: 13px;
+}
+
+.apm-card-remark {
   overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.apm-card-acts {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 10px;
+  background: rgba(0, 0, 0, 0.02);
+  border-radius: 6px;
+}
+
+.apm-card-acts-label {
+  font-size: 12px;
+  color: rgba(0, 0, 0, 0.45);
+}
+
+.apm-act-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.apm-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding-top: 4px;
+  border-top: 1px solid rgba(0, 0, 0, 0.04);
+}
+
+.apm-muted {
+  font-size: 12px;
+  color: rgba(0, 0, 0, 0.45);
 }
 
 .apm-drawer-sub {

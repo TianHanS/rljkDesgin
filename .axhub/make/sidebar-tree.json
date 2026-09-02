@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-08-24T07:56:17.951Z",
+  "updatedAt": "2026-09-01T02:58:09.961Z",
   "prototypes": [
     {
       "id": "item-prototypes-ref-antd",
@@ -299,6 +299,36 @@
       "kind": "item",
       "title": "coal storage structure management",
       "itemKey": "prototypes/coal-storage-structure-management"
+    },
+    {
+      "id": "item-prototypes-auto-entry-monitor",
+      "kind": "item",
+      "title": "auto entry monitor",
+      "itemKey": "prototypes/auto-entry-monitor"
+    },
+    {
+      "id": "item-prototypes-auto-process-config",
+      "kind": "item",
+      "title": "auto process config",
+      "itemKey": "prototypes/auto-process-config"
+    },
+    {
+      "id": "item-prototypes-auto-process-management",
+      "kind": "item",
+      "title": "auto process management",
+      "itemKey": "prototypes/auto-process-management"
+    },
+    {
+      "id": "item-prototypes-manual-entry-registration",
+      "kind": "item",
+      "title": "manual entry registration",
+      "itemKey": "prototypes/manual-entry-registration"
+    },
+    {
+      "id": "item-prototypes-outdoor-queue-dispatch",
+      "kind": "item",
+      "title": "outdoor queue dispatch",
+      "itemKey": "prototypes/outdoor-queue-dispatch"
     }
   ],
   "components": [

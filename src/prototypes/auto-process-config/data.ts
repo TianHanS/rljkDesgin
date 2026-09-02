@@ -331,7 +331,7 @@ const sampleActivities: SpecActivity[] = [
   },
 ];
 
-import { WEIGH_ACTIVITIES, weighDefaultValues } from './weighSpec';
+import { WEIGH_ACTIVITIES, WEIGH_DEFAULT_STEPS, buildWeighDetails } from './weighSpec';
 
 export const SPEC_BY_TYPE: Record<string, SpecActivity[]> = {
   'mt-entry': entryActivities,
@@ -504,30 +504,8 @@ export const INITIAL_CONFIGS: ModuleAutoConfig[] = [
     moduleId: 'mod-weigh1',
     createdAt: '2026-08-31 09:00:00',
     updatedAt: '2026-08-31 15:20:00',
-    steps: [{ instanceId: 's6', activityId: 'act-weigh-main' }],
-    details: [
-      {
-        activityId: 'act-weigh-main',
-        paramValues: weighDefaultValues(),
-        messages: [
-          {
-            messageId: 'wm-led',
-            ledEnabled: true,
-            ledTemplate: '{车牌号} 计量完成\n净重 {重量} 吨',
-            voiceEnabled: false,
-            voiceTemplate: '',
-          },
-          {
-            messageId: 'wm-voice',
-            ledEnabled: false,
-            ledTemplate: '',
-            voiceEnabled: true,
-            voiceTemplate: '{车牌号}计量完成，请下磅',
-          },
-        ],
-        needsReview: false,
-      },
-    ],
+    steps: WEIGH_DEFAULT_STEPS,
+    details: buildWeighDetails(),
     paramsDirty: false,
     serviceStatus: 'running',
     packageVersion: 'v2.1.0',

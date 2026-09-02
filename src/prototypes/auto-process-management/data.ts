@@ -1,5 +1,5 @@
 /**
- * 自动化流程管理 · Mock 数据与类型
+ * 流程规格配置 · Mock 数据与类型
  */
 
 export interface ModuleType {
@@ -201,6 +201,14 @@ export const INITIAL_PROCESSES: ProcessConfig[] = [
         ],
       },
     ],
+  },
+  {
+    id: 'proc-3',
+    moduleTypeId: 'mt-weigh',
+    name: '汽车过衡规格流程',
+    remark: '新建规格，活动待完善',
+    updatedAt: '2026-08-28 08:05:00',
+    activities: [],
   },
 ];
 

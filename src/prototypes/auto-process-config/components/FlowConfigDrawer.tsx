@@ -7,7 +7,6 @@ import {
   Button,
   Drawer,
   Empty,
-  Form,
   Input,
   InputNumber,
   Radio,
@@ -22,7 +21,7 @@ import {
   HolderOutlined,
   PlusOutlined,
 } from '@ant-design/icons';
-import MessageTemplateField from './MessageTemplateField';
+import ActivityMessageSection from './ActivityMessageSection';
 import {
   SPEC_BY_TYPE,
   findActivity,
@@ -315,7 +314,7 @@ const FlowConfigDrawer: React.FC<Props> = ({ open, config, onClose, onSave }) =>
     <div className="apc-flow-layout">
       <div className="apc-flow-pane">
         <div className="apc-pane-hd">
-          <span>规格活动库</span>
+          <span>可选流程</span>
           <Tag>{type?.name}</Tag>
         </div>
         <p className="apc-hint">点击「添加」将环节加入右侧流水线；同一活动可重复添加。</p>
@@ -400,22 +399,28 @@ const FlowConfigDrawer: React.FC<Props> = ({ open, config, onClose, onSave }) =>
       {!uniqueActivityIds.length ? (
         <Empty description="请先在「流程环节配置」中保存环节" style={{ marginTop: 64 }} />
       ) : (
-        uniqueActivityIds.map((activityId) => {
+        uniqueActivityIds.map((activityId, actIdx) => {
           const spec = findActivity(typeId, activityId);
           const detail = details.find((d) => d.activityId === activityId);
           if (!spec || !detail) return null;
           const dupCount = steps.filter((s) => s.activityId === activityId).length;
+          const firstStepIdx = steps.findIndex((s) => s.activityId === activityId);
+          const stepNo = firstStepIdx >= 0 ? firstStepIdx + 1 : actIdx + 1;
           return (
-            <section key={activityId} className="apc-act-block">
+            <section key={activityId} className="apc-act-card">
               <header className="apc-act-hd">
-                <div>
-                  <h3>{spec.name}</h3>
-                  <span className="apc-muted">{spec.code}</span>
-                  {dupCount > 1 && (
-                    <Tag color="blue" style={{ marginLeft: 8 }}>
-                      流水线出现 {dupCount} 次 · 参数共用一份
-                    </Tag>
-                  )}
+                <div className="apc-act-hd-main">
+                  <span className="apc-act-step-no">{stepNo}</span>
+                  <div>
+                    <h3>{spec.name}</h3>
+                    <span className="apc-muted">{spec.code}</span>
+                    {dupCount > 1 && (
+                      <Tag color="blue" style={{ marginLeft: 8 }}>
+                        流水线出现 {dupCount} 次 · 参数共用一份
+                      </Tag>
+                    )}
+                    <p className="apc-act-desc">{spec.remark}</p>
+                  </div>
                 </div>
                 {detail.needsReview && (
                   <Tag icon={<ExclamationCircleFilled />} color="warning">
@@ -423,77 +428,24 @@ const FlowConfigDrawer: React.FC<Props> = ({ open, config, onClose, onSave }) =>
                   </Tag>
                 )}
               </header>
-              <p className="apc-act-desc">{spec.remark}</p>
 
               {!!spec.params.length && (
-                <div className="apc-sub">{renderParamGroups(activityId, spec, detail)}</div>
+                <div className="apc-act-inner">
+                  <div className="apc-group-hd">
+                    <span className="apc-group-dot" />
+                    <h4>详细参数</h4>
+                  </div>
+                  {renderParamGroups(activityId, spec, detail)}
+                </div>
               )}
 
               {!!spec.messages.length && (
-                <div className="apc-sub">
-                  <div className="apc-group-hd">
-                    <span className="apc-group-dot" />
-                    <h4>消息通知</h4>
-                  </div>
-                  <p className="apc-hint">
-                    配置本流程触发时的语音与 LED 显示；可用占位符与快捷输入组合内容。
-                  </p>
-                  <div className="apc-msg-grid">
-                    {spec.messages.map((m) => {
-                      const mv = detail.messages.find((x) => x.messageId === m.id);
-                      if (!mv) return null;
-                      return (
-                        <div key={m.id} className="apc-msg-card">
-                          <div className="apc-msg-card-hd">
-                            <strong>{m.name}</strong>
-                            <code>{m.code}</code>
-                          </div>
-                          <Form layout="vertical" size="small">
-                            <Form.Item label="LED 是否启用">
-                              <Radio.Group
-                                value={mv.ledEnabled}
-                                options={[
-                                  { label: '启用', value: true },
-                                  { label: '禁用', value: false },
-                                ]}
-                                onChange={(e) =>
-                                  patchMessage(activityId, m.id, { ledEnabled: e.target.value })
-                                }
-                              />
-                            </Form.Item>
-                            <MessageTemplateField
-                              label="LED 默认模板"
-                              kind="led"
-                              value={mv.ledTemplate}
-                              disabled={!mv.ledEnabled}
-                              quickOptions={m.ledQuickOptions}
-                              onChange={(v) => patchMessage(activityId, m.id, { ledTemplate: v })}
-                            />
-                            <Form.Item label="语音是否启用" style={{ marginTop: 8 }}>
-                              <Radio.Group
-                                value={mv.voiceEnabled}
-                                options={[
-                                  { label: '启用', value: true },
-                                  { label: '禁用', value: false },
-                                ]}
-                                onChange={(e) =>
-                                  patchMessage(activityId, m.id, { voiceEnabled: e.target.value })
-                                }
-                              />
-                            </Form.Item>
-                            <MessageTemplateField
-                              label="语音默认模板"
-                              kind="voice"
-                              value={mv.voiceTemplate}
-                              disabled={!mv.voiceEnabled}
-                              quickOptions={m.voiceQuickOptions}
-                              onChange={(v) => patchMessage(activityId, m.id, { voiceTemplate: v })}
-                            />
-                          </Form>
-                        </div>
-                      );
-                    })}
-                  </div>
+                <div className="apc-act-inner">
+                  <ActivityMessageSection
+                    messages={spec.messages}
+                    values={detail.messages}
+                    onChange={(messageId, patch) => patchMessage(activityId, messageId, patch)}
+                  />
                 </div>
               )}
 

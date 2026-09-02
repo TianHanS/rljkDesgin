@@ -343,25 +343,80 @@ body,
   background: #fff;
 }
 
+.apc-act-card {
+  position: relative;
+  border: 1px solid #91caff;
+  border-radius: 10px;
+  padding: 0;
+  margin-bottom: 16px;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(22, 119, 255, 0.06);
+  overflow: hidden;
+}
+
+.apc-act-card::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: #1677ff;
+}
+
 .apc-act-hd {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 8px;
+  padding: 14px 16px 10px 18px;
+  background: linear-gradient(180deg, #f0f7ff 0%, #fff 100%);
+  border-bottom: 1px solid #e6f4ff;
+}
+
+.apc-act-hd-main {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  min-width: 0;
+}
+
+.apc-act-step-no {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  background: #1677ff;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 650;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 2px;
 }
 
 .apc-act-hd h3 {
   margin: 0;
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 650;
   display: inline;
   margin-right: 8px;
 }
 
 .apc-act-desc {
-  margin: 6px 0 12px;
+  margin: 4px 0 0;
   font-size: 12px;
   color: rgba(0, 0, 0, 0.45);
+}
+
+.apc-act-inner {
+  padding: 12px 16px 14px 18px;
+  border-top: 1px dashed #e6f4ff;
+}
+
+.apc-act-inner + .apc-act-inner {
+  background: #fafcff;
 }
 
 .apc-sub {
@@ -369,7 +424,8 @@ body,
   padding-top: 4px;
 }
 
-.apc-sub h4 {
+.apc-sub h4,
+.apc-act-inner h4 {
   margin: 0;
   font-size: 13px;
   font-weight: 600;
@@ -449,6 +505,45 @@ body,
   display: flex;
   flex-wrap: wrap;
   gap: 4px 0;
+}
+
+.apc-msg-section {
+  margin-top: 0;
+}
+
+.apc-msg-scenario-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.apc-msg-scenario-card {
+  border: 1px solid #91caff;
+  border-radius: 8px;
+  padding: 12px 14px;
+  background: #fff;
+}
+
+.apc-msg-scenario-title {
+  font-size: 14px;
+  font-weight: 650;
+  margin-bottom: 10px;
+  color: rgba(0, 0, 0, 0.88);
+}
+
+.apc-msg-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.apc-msg-row:last-child {
+  margin-bottom: 0;
+}
+
+.apc-placeholder-shared {
+  margin-bottom: 12px;
 }
 
 .apc-msg-grid {

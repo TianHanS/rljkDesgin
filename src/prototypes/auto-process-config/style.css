@@ -512,30 +512,33 @@ body,
 }
 
 .apc-msg-scenario-list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  align-items: stretch;
 }
 
 .apc-msg-scenario-card {
+  min-width: 0;
+  height: 100%;
   border: 1px solid #91caff;
   border-radius: 8px;
-  padding: 12px 14px;
+  padding: 10px 12px;
   background: #fff;
 }
 
 .apc-msg-scenario-title {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 650;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
   color: rgba(0, 0, 0, 0.88);
 }
 
 .apc-msg-row {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  margin-bottom: 10px;
+  gap: 4px;
+  margin-bottom: 8px;
 }
 
 .apc-msg-row:last-child {
@@ -644,7 +647,8 @@ body,
   .apc-param-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-  .apc-msg-grid {
+  .apc-msg-grid,
+  .apc-msg-scenario-list {
     grid-template-columns: 1fr;
   }
 }

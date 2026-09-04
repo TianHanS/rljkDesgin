@@ -1,11 +1,13 @@
 /**
  * @name 燃煤入厂登记
+ * @mode axure
  *
  * 参考资料：
  * - /rules/design-guide.md
  * - /rules/development-standards.md
  * - /src/themes/antd-new/DESIGN-SPEC.md
  * - /skills/default-design-guide-minimal/SKILL.md
+ * - /skills/axure-export-workflow/SKILL.md
  * - 用户提供的人工入厂登记业务规约
  */
 import React, { useLayoutEffect, useMemo, useRef, useState } from 'react';
@@ -111,7 +113,7 @@ const emptyForm = (): FormValues => ({
   taskNo: undefined,
 });
 
-const ManualEntryRegistration: React.FC = () => {
+const Component: React.FC = () => {
   const cachedSite = readCachedSiteId();
   const defaultSite = SITES.find((s) => s.id === cachedSite) ?? SITES[0];
 
@@ -697,4 +699,4 @@ const ManualEntryRegistration: React.FC = () => {
   );
 };
 
-export default ManualEntryRegistration;
+export default Component;

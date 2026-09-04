@@ -1,5 +1,10 @@
 /**
  * @name 自动入厂监测
+ * @mode axure
+ *
+ * 参考资料：
+ * - /rules/development-standards.md
+ * - /skills/axure-export-workflow/SKILL.md
  */
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ConfigProvider, Segmented, message } from 'antd';
@@ -48,7 +53,7 @@ function ledTextFor(gate: GatePoint, enabled: boolean): string {
   return '请排队等候  保持车距';
 }
 
-const AutoEntryMonitor: React.FC = () => {
+const Component: React.FC = () => {
   const [now, setNow] = useState(() => new Date());
   const [systemId, setSystemId] = useState(SYSTEMS[0].id);
   const [gates, setGates] = useState<GatePoint[]>(() => createInitialGates());
@@ -188,4 +193,4 @@ const AutoEntryMonitor: React.FC = () => {
   );
 };
 
-export default AutoEntryMonitor;
+export default Component;
